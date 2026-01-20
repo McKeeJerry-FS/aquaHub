@@ -11,4 +11,5 @@ public class Tank
     public double Width { get; set; }
     public double Height { get; set; }
     public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
 }

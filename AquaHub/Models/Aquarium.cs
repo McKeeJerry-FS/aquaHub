@@ -14,6 +14,7 @@ public class Aquarium
     public AquariumType Type { get; set; }
     public AquariumSubstrate Substrate { get; set; }
     public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
 
     // Navigation properties
     public IEnumerable<Equipment> AquariumEquipment { get; set; } = new List<Equipment>();
