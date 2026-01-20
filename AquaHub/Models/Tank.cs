@@ -1,15 +1,19 @@
 using System;
+using AquaHub.Models.Enums;
 
 namespace AquaHub.Models;
 
 public class Tank
 {
-    public Guid Id { get; set; }
+    public int Id { get; set; } 
     public string Name { get; set; } = string.Empty;
-    public double VolumeLiters { get; set; }
-    public double Length { get; set; }
-    public double Width { get; set; }
-    public double Height { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime UpdatedAt { get; set; }
+    public double VolumeGallons { get; set; } 
+    public AquariumType Type { get; set; } 
+    public DateTime StartDate { get; set; } 
+    public string Notes { get; set; } = string.Empty;
+    public ICollection<WaterTest> WaterTests { get; set; } = new List<WaterTest>();
+    public ICollection<Livestock> Livestock { get; set; } = new List<Livestock>(); 
+    public ICollection<Equipment> Equipment { get; set; } = new List<Equipment>();
+    public ICollection<MaintenanceLog> MaintenanceLogs { get; set; } = new List<MaintenanceLog>();
 }
+
