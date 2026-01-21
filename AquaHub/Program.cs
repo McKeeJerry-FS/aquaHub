@@ -7,6 +7,8 @@ using AquaHub.Components;
 using AquaHub.Components.Account;
 using AquaHub.Data;
 using AquaHub.Models;
+using AquaHub.Services.Interfaces;
+using AquaHub.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,6 +41,7 @@ builder.Services.AddIdentityCore<AppUser>(options =>
     .AddSignInManager()
     .AddDefaultTokenProviders();
 
+builder.Services.AddSingleton<ITankService, TankService>();
 builder.Services.AddSingleton<IEmailSender<AppUser>, IdentityNoOpEmailSender>();
 
 var app = builder.Build();
