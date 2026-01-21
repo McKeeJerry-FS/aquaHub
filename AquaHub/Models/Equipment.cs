@@ -4,25 +4,12 @@ using AquaHub.Models.Enums;
 
 namespace AquaHub.Models;
 
-public class Equipment
+public abstract class Equipment
 {
-    [Key]
-    public Guid Id { get; set; }
-    
-    [Display(Name = "Equipment Type")]
-    public EquipmentType EquipmentType { get; set; }
-    
-    [Required]
-    [Display(Name = "Equipment Name")]
-    public string Name { get; set; } = string.Empty;
-
+    public int Id { get; set; }
+    public int TankId { get; set; }
+    public Tank? Tank { get; set; }
     public string Brand { get; set; } = string.Empty;
-
     public string Model { get; set; } = string.Empty;
-
-    public DateTime PurchaseDate { get; set; }
-
-    public DateTime CreatedAt { get; set; }
-
-    public DateTime UpdatedAt { get; set; }
+    public DateTime InstalledOn { get; set; }
 }

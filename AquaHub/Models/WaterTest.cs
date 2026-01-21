@@ -6,7 +6,7 @@ public class WaterTest
 {
     public int Id { get; set; }
     public int TankId { get; set; }
-    public Tank Tank { get; set; }
+    public Tank? Tank { get; set; }
     
     // Shared 
     public double? PH { get; set; }
