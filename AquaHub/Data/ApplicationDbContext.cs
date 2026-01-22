@@ -6,7 +6,6 @@ namespace AquaHub.Data;
 
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<AppUser>(options)
 {
-
     public DbSet<Tank> Tanks { get; set; }
     public DbSet<Livestock> Livestock { get; set; }
     public DbSet<Coral> Corals { get; set; }
@@ -34,6 +33,16 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                 }
             }
         }
-    }
 
+        // Configure Tank entity
+        modelBuilder.Entity<Tank>(entity =>
+        {
+            entity.Property(t => t.UserId).IsRequired();
+
+            entity.HasOne(t => t.User)
+                .WithMany(u => u.Tanks)
+                .HasForeignKey(t => t.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+    }
 }

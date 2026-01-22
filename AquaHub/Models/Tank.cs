@@ -33,12 +33,11 @@ public class Tank
     // Image path stored relative to wwwroot
     public string? ImagePath { get; set; }
 
-    // User ownership
-    [Required]
+    // User ownership - Required at database level but set by service, not by user input
     public string UserId { get; set; } = string.Empty;
 
     [ForeignKey(nameof(UserId))]
-    public AppUser User { get; set; } = null!;
+    public AppUser? User { get; set; }
 
     public ICollection<WaterTest> WaterTests { get; set; } = new List<WaterTest>();
     public ICollection<Livestock> Livestock { get; set; } = new List<Livestock>();
