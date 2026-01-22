@@ -14,160 +14,255 @@
 
 <PageTitle>Edit Tank</PageTitle>
 
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            @if (isLoading)
-            {
-                <div class="text-center">
-                    <div class="spinner-border" role="status">
-                        <span class="visually-hidden">Loading...</span>
+<div class="edit-tank-page">
+    <!-- Header Section -->
+    <div class="page-header">
+        <div class="container">
+            <div class="py-4">
+                <h1 class="display-5 fw-bold mb-2">
+                    <i class="bi bi-pencil-square me-2"></i>
+                    Edit Tank
+                </h1>
+                <p class="mb-0">Update your aquarium information</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container py-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                @if (isLoading)
+                {
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="text-muted mt-3">Loading tank details...</p>
                     </div>
-                </div>
-            }
-            else if (tank == null)
-            {
-                <div class="alert alert-danger">
-                    <h4>Tank Not Found</h4>
-                    <p>The tank you're looking for doesn't exist.</p>
-                    <a href="/tanks" class="btn btn-primary">Back to Tanks</a>
-                </div>
-            }
-            else
-            {
-                <h1 class="mb-4">Edit Tank: @tank.Name</h1>
+                }
+                else if (tank == null)
+                {
+                    <div class="alert-card alert-danger-card">
+                        <i class="bi bi-exclamation-triangle-fill display-4 mb-3"></i>
+                        <h4>Tank Not Found</h4>
+                        <p>The tank you're looking for doesn't exist.</p>
+                        <a href="/tanks" class="btn btn-primary">
+                            <i class="bi bi-arrow-left me-2"></i>
+                            Back to Tanks
+                        </a>
+                    </div>
+                }
+                else
+                {
+                    <EditForm Model="@tank" OnValidSubmit="@HandleSubmit" FormName="editTankForm">
+                        <DataAnnotationsValidator />
 
-                <EditForm Model="@tank" OnValidSubmit="@HandleSubmit" FormName="editTankForm">
-                    <DataAnnotationsValidator />
-                    <ValidationSummary class="text-danger" />
-
-                    <div class="card">
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <label for="name" class="form-label">Tank Name</label>
-                                <InputText id="name" @bind-Value="tank.Name" class="form-control"
-                                    placeholder="e.g., Living Room Reef, 75g Planted Tank" />
-                                <ValidationMessage For="@(() => tank.Name)" />
+                        <div class="form-card">
+                            <div class="form-card-header">
+                                <i class="bi bi-droplet-fill me-2"></i>
+                                @tank.Name
                             </div>
 
-                            <div class="mb-3">
-                                <label for="image" class="form-label">Tank Image</label>
+                            <div class="form-card-body">
+                                <!-- Tank Name -->
+                                <div class="form-group">
+                                    <label for="name" class="form-label">
+                                        <i class="bi bi-tag text-primary me-2"></i>
+                                        Tank Name <span class="text-danger">*</span>
+                                    </label>
+                                    <InputText id="name" @bind-Value="tank.Name" class="form-control form-control-lg"
+                                        placeholder="e.g., Living Room Reef, 75g Planted Tank" />
+                                    <ValidationMessage For="@(() => tank.Name)" class="text-danger small mt-1" />
+                                </div>
 
-                                @if (!string.IsNullOrEmpty(currentImagePath) && !removeCurrentImage)
-                                {
-                                    <div class="mb-2">
-                                        <img src="@currentImagePath" alt="Current tank image" class="img-thumbnail"
-                                            style="max-height: 200px;" />
-                                        <div class="mt-2">
-                                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                <!-- Tank Image -->
+                                <div class="form-group">
+                                    <label for="image" class="form-label">
+                                        <i class="bi bi-image text-primary me-2"></i>
+                                        Tank Image
+                                    </label>
+
+                                    @if (!string.IsNullOrEmpty(currentImagePath) && !removeCurrentImage)
+                                    {
+                                        <div class="current-image-container mb-3">
+                                            <img src="@currentImagePath" alt="Current tank image" class="current-image" />
+                                            <button type="button" class="btn btn-sm btn-outline-danger mt-2"
                                                 @onclick="RemoveCurrentImage">
                                                 <i class="bi bi-trash"></i> Remove Current Image
                                             </button>
                                         </div>
-                                    </div>
-                                }
-                                else if (removeCurrentImage)
-                                {
-                                    <div class="alert alert-warning py-2 mb-2">
-                                        <small>Current image will be removed when you save.</small>
-                                        <button type="button" class="btn btn-sm btn-link"
-                                            @onclick="UndoRemoveImage">Undo</button>
-                                    </div>
-                                }
-
-                                <InputFile id="image" OnChange="HandleImageSelected" class="form-control"
-                                    accept="image/*" />
-                                <small class="form-text text-muted">
-                                    @if (string.IsNullOrEmpty(currentImagePath) || removeCurrentImage)
+                                    }
+                                    else if (removeCurrentImage)
                                     {
-                                        <span>Upload a new image. Max size: 5MB. Formats: JPG, PNG, GIF, WebP</span>
+                                        <div class="alert alert-warning py-2 mb-3">
+                                            <i class="bi bi-exclamation-triangle me-2"></i>
+                                            <small>Current image will be removed when you save.</small>
+                                            <button type="button" class="btn btn-sm btn-link"
+                                                @onclick="UndoRemoveImage">Undo</button>
+                                        </div>
+                                    }
+
+                                    <InputFile id="image" OnChange="HandleImageSelected" class="form-control"
+                                        accept="image/*" />
+                                    <small class="form-text text-muted">
+                                        @if (string.IsNullOrEmpty(currentImagePath) || removeCurrentImage)
+                                        {
+                                            <span>Upload a new image. Max size: 5MB.</span>
+                                        }
+                                        else
+                                        {
+                                            <span>Upload a new image to replace the current one. Max size: 5MB.</span>
+                                        }
+                                    </small>
+
+                                    @if (!string.IsNullOrEmpty(newImagePreview))
+                                    {
+                                        <div class="image-preview-container mt-3">
+                                            <p class="mb-2 fw-bold">New Image Preview:</p>
+                                            <img src="@newImagePreview" alt="Preview" class="image-preview" />
+                                        </div>
+                                    }
+                                </div>
+
+                                <!-- Volume and Type Row -->
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="volume" class="form-label">
+                                                <i class="bi bi-droplet-half text-primary me-2"></i>
+                                                Volume (Gallons) <span class="text-danger">*</span>
+                                            </label>
+                                            <InputNumber id="volume" @bind-Value="tank.VolumeGallons" class="form-control"
+                                                placeholder="e.g., 55" />
+                                            <ValidationMessage For="@(() => tank.VolumeGallons)"
+                                                class="text-danger small mt-1" />
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="type" class="form-label">
+                                                <i class="bi bi-water text-primary me-2"></i>
+                                                Tank Type <span class="text-danger">*</span>
+                                            </label>
+                                            <InputSelect id="type" @bind-Value="tank.Type" class="form-select">
+                                                @foreach (var type in Enum.GetValues<AquariumType>())
+                                                {
+                                                    <option value="@type">@type</option>
+                                                }
+                                            </InputSelect>
+                                            <ValidationMessage For="@(() => tank.Type)" class="text-danger small mt-1" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Start Date -->
+                                <div class="form-group">
+                                    <label for="startDate" class="form-label">
+                                        <i class="bi bi-calendar3 text-primary me-2"></i>
+                                        Start Date <span class="text-danger">*</span>
+                                    </label>
+                                    <InputDate id="startDate" @bind-Value="tank.StartDate" class="form-control" />
+                                    <ValidationMessage For="@(() => tank.StartDate)" class="text-danger small mt-1" />
+                                </div>
+
+                                <!-- Notes -->
+                                <div class="form-group">
+                                    <label for="notes" class="form-label">
+                                        <i class="bi bi-journal-text text-primary me-2"></i>
+                                        Notes (Optional)
+                                    </label>
+                                    <InputTextArea id="notes" @bind-Value="tank.Notes" class="form-control" rows="4"
+                                        placeholder="Any additional information about your tank..." />
+                                    <ValidationMessage For="@(() => tank.Notes)" class="text-danger small mt-1" />
+                                </div>
+
+                                <!-- Tank Stats -->
+                                <div class="stats-box">
+                                    <h6 class="mb-3">
+                                        <i class="bi bi-graph-up me-2"></i>
+                                        Tank Statistics
+                                    </h6>
+                                    <div class="row g-3">
+                                        <div class="col-6 col-md-3">
+                                            <div class="stat-item">
+                                                <i class="bi bi-droplet-half"></i>
+                                                <div class="stat-value">@tank.WaterTests.Count</div>
+                                                <div class="stat-label">Water Tests</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-6 col-md-3">
+                                            <div class="stat-item">
+                                                <i class="bi bi-heart-pulse"></i>
+                                                <div class="stat-value">@tank.Livestock.Count</div>
+                                                <div class="stat-label">Livestock</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-6 col-md-3">
+                                            <div class="stat-item">
+                                                <i class="bi bi-gear"></i>
+                                                <div class="stat-value">@tank.Equipment.Count</div>
+                                                <div class="stat-label">Equipment</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-6 col-md-3">
+                                            <div class="stat-item">
+                                                <i class="bi bi-calendar-check"></i>
+                                                <div class="stat-value">@tank.MaintenanceLogs.Count</div>
+                                                <div class="stat-label">Maintenance</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-card-footer">
+                                <button type="submit" class="btn btn-primary btn-lg" disabled="@isSubmitting">
+                                    @if (isSubmitting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"
+                                            aria-hidden="true"></span>
+                                        <span>Updating...</span>
                                     }
                                     else
                                     {
-                                        <span>Upload a new image to replace the current one. Max size: 5MB. Formats: JPG, PNG,
-                                            GIF, WebP</span>
+                                        <i class="bi bi-check-circle me-2"></i>
+                                        <span>Save Changes</span>
                                     }
-                                </small>
-
-                                @if (!string.IsNullOrEmpty(newImagePreview))
-                                {
-                                    <div class="mt-2">
-                                        <p class="mb-1"><strong>New Image Preview:</strong></p>
-                                        <img src="@newImagePreview" alt="Preview" class="img-thumbnail"
-                                            style="max-height: 200px;" />
-                                    </div>
-                                }
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="volume" class="form-label">Volume (Gallons)</label>
-                                <InputNumber id="volume" @bind-Value="tank.VolumeGallons" class="form-control"
-                                    placeholder="e.g., 55" />
-                                <ValidationMessage For="@(() => tank.VolumeGallons)" />
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="type" class="form-label">Tank Type</label>
-                                <InputSelect id="type" @bind-Value="tank.Type" class="form-select">
-                                    @foreach (var type in Enum.GetValues<AquariumType>())
-                                    {
-                                        <option value="@type">@type</option>
-                                    }
-                                </InputSelect>
-                                <ValidationMessage For="@(() => tank.Type)" />
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="startDate" class="form-label">Start Date</label>
-                                <InputDate id="startDate" @bind-Value="tank.StartDate" class="form-control" />
-                                <ValidationMessage For="@(() => tank.StartDate)" />
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="notes" class="form-label">Notes (Optional)</label>
-                                <InputTextArea id="notes" @bind-Value="tank.Notes" class="form-control" rows="4"
-                                    placeholder="Any additional information about your tank..." />
-                                <ValidationMessage For="@(() => tank.Notes)" />
-                            </div>
-
-                            <div class="mb-3 text-muted small">
-                                <p class="mb-1"><strong>Tank Statistics:</strong></p>
-                                <ul class="mb-0">
-                                    <li>Water Tests: @tank.WaterTests.Count</li>
-                                    <li>Livestock: @tank.Livestock.Count</li>
-                                    <li>Equipment: @tank.Equipment.Count</li>
-                                    <li>Maintenance Logs: @tank.MaintenanceLogs.Count</li>
-                                </ul>
+                                </button>
+                                <a href="/tanks" class="btn btn-outline-secondary btn-lg">
+                                    <i class="bi bi-x-circle me-2"></i>
+                                    Cancel
+                                </a>
                             </div>
                         </div>
 
-                        <div class="card-footer bg-transparent">
-                            <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
-                                @if (isSubmitting)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                    <span>Saving...</span>
-                                }
-                                else
-                                {
-                                    <span>Update Tank</span>
-                                }
-                            </button>
-                            <a href="/tanks" class="btn btn-secondary">Cancel</a>
-                        </div>
-                    </div>
-
-                    @if (!string.IsNullOrEmpty(errorMessage))
-                    {
-                        <div class="alert alert-danger mt-3">
-                            @errorMessage
-                        </div>
-                    }
-                </EditForm>
-            }
+                        @if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            <div class="alert alert-danger mt-3 shadow-sm">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                @errorMessage
+                            </div>
+                        }
+                    </EditForm>
+                }
+            </div>
         </div>
     </div>
 </div>
+
+<style>
+    .edit-tank-page {
+        background: linear-gradient(180deg, #e3f2fd 0%, #ffffff 100%);
+        min-height: 100vh;
+    }
+
+    .page-header {
+        background: linear-gradient(135deg, #0288d1 0%, #01579b 100%);
+        color: white;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+</style>
 
 @code {
     [Parameter]
