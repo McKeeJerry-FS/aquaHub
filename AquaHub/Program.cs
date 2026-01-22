@@ -42,6 +42,7 @@ builder.Services.AddIdentityCore<AppUser>(options =>
     .AddDefaultTokenProviders();
 
 builder.Services.AddScoped<ITankService, TankService>();
+builder.Services.AddScoped<IFileUploadService, FileUploadService>();
 builder.Services.AddSingleton<IEmailSender<AppUser>, IdentityNoOpEmailSender>();
 
 var app = builder.Build();

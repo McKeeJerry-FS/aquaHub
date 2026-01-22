@@ -4,6 +4,7 @@
 @using AquaHub.Models.Enums
 @using AquaHub.Services.Interfaces
 @inject ITankService TankService
+@inject IFileUploadService FileUploadService
 @inject NavigationManager Navigation
 @rendermode InteractiveServer
 
@@ -24,6 +25,18 @@
                             <label for="name" class="form-label">Tank Name</label>
                             <InputText id="name" @bind-Value="tank.Name" class="form-control" placeholder="e.g., Living Room Reef, 75g Planted Tank" />
                             <ValidationMessage For="@(() => tank.Name)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="image" class="form-label">Tank Image (Optional)</label>
+                            <InputFile id="image" OnChange="HandleImageSelected" class="form-control" accept="image/*" />
+                            <small class="form-text text-muted">Max size: 5MB. Formats: JPG, PNG, GIF, WebP</small>
+                            @if (!string.IsNullOrEmpty(imagePreview))
+                            {
+                                <div class="mt-2">
+                                    <img src="@imagePreview" alt="Preview" class="img-thumbnail" style="max-height: 200px;" />
+                                </div>
+                            }
                         </div>
 
                         <div class="mb-3">
@@ -88,6 +101,25 @@
     private Tank tank = new() { StartDate = DateTime.Today };
     private bool isSubmitting = false;
     private string? errorMessage;
+    private IBrowserFile? selectedImage;
+    private string? imagePreview;
+
+    private async Task HandleImageSelected(InputFileChangeEventArgs e)
+    {
+        selectedImage = e.File;
+        
+        if (selectedImage != null)
+        {
+            // Create preview
+            var imageStream = selectedImage.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+            var ms = new MemoryStream();
+            await imageStream.CopyToAsync(ms);
+            ms.Position = 0;
+            
+            var base64 = Convert.ToBase64String(ms.ToArray());
+            imagePreview = $"data:{selectedImage.ContentType};base64,{base64}";
+        }
+    }
 
     private async Task HandleSubmit()
     {
@@ -96,6 +128,13 @@
 
         try
         {
+            // Upload image if selected
+            if (selectedImage != null)
+            {
+                using var stream = selectedImage.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+                tank.ImagePath = await FileUploadService.SaveImageAsync(stream, selectedImage.Name);
+            }
+
             await TankService.CreateTankAsync(tank);
             Navigation.NavigateTo("/tanks");
         }

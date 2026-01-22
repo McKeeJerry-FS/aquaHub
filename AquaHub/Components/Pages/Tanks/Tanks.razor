@@ -40,6 +40,18 @@
             {
                 <div class="col-md-6 col-lg-4 mb-4">
                     <div class="card h-100">
+                        @if (!string.IsNullOrEmpty(tank.ImagePath))
+                        {
+                            <img src="@tank.ImagePath" class="card-img-top" alt="@tank.Name"
+                                style="height: 200px; object-fit: cover;" />
+                        }
+                        else
+                        {
+                            <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center"
+                                style="height: 200px;">
+                                <i class="bi bi-water text-white" style="font-size: 4rem;"></i>
+                            </div>
+                        }
                         <div class="card-body">
                             <h5 class="card-title">@tank.Name</h5>
                             <p class="card-text">
@@ -53,8 +65,12 @@
                             }
                         </div>
                         <div class="card-footer bg-transparent">
-                            <a href="/tanks/edit/@tank.Id" class="btn btn-sm btn-outline-primary">Edit</a>
-                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteTank(tank.Id)">Delete</button>
+                            <a href="/tanks/edit/@tank.Id" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil"></i> Edit
+                            </a>
+                            <a href="/tanks/delete/@tank.Id" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-trash"></i> Delete
+                            </a>
                         </div>
                     </div>
                 </div>

@@ -218,6 +218,14 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9UYW5rcy9BZGRUYW5rLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
+[/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Pages/Tanks/DeleteTank.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9UYW5rcy9EZWxldGVUYW5rLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Pages/Tanks/EditTank.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9UYW5rcy9FZGl0VGFuay5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
 [/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Pages/Tanks/Tanks.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9UYW5rcy9UYW5rcy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 

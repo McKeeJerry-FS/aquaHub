@@ -1,0 +1,153 @@
+﻿@page "/tanks/edit/{Id:int}"
+@using AquaHub.Services.Interfaces
+@using AquaHub.Models
+@using AquaHub.Models.Enums
+@inject ITankService TankService
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Edit Tank</PageTitle>
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            @if (isLoading)
+            {
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            }
+            else if (tank == null)
+            {
+                <div class="alert alert-danger">
+                    <h4>Tank Not Found</h4>
+                    <p>The tank you're looking for doesn't exist.</p>
+                    <a href="/tanks" class="btn btn-primary">Back to Tanks</a>
+                </div>
+            }
+            else
+            {
+                <h1 class="mb-4">Edit Tank: @tank.Name</h1>
+
+                <EditForm Model="@tank" OnValidSubmit="@HandleSubmit" FormName="editTankForm">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger" />
+
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Tank Name</label>
+                                <InputText id="name" @bind-Value="tank.Name" class="form-control" placeholder="e.g., Living Room Reef, 75g Planted Tank" />
+                                <ValidationMessage For="@(() => tank.Name)" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="volume" class="form-label">Volume (Gallons)</label>
+                                <InputNumber id="volume" @bind-Value="tank.VolumeGallons" class="form-control" placeholder="e.g., 55" />
+                                <ValidationMessage For="@(() => tank.VolumeGallons)" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="type" class="form-label">Tank Type</label>
+                                <InputSelect id="type" @bind-Value="tank.Type" class="form-select">
+                                    @foreach (var type in Enum.GetValues<AquariumType>())
+                                    {
+                                        <option value="@type">@type</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="@(() => tank.Type)" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="startDate" class="form-label">Start Date</label>
+                                <InputDate id="startDate" @bind-Value="tank.StartDate" class="form-control" />
+                                <ValidationMessage For="@(() => tank.StartDate)" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="notes" class="form-label">Notes (Optional)</label>
+                                <InputTextArea id="notes" @bind-Value="tank.Notes" class="form-control" rows="4" placeholder="Any additional information about your tank..." />
+                                <ValidationMessage For="@(() => tank.Notes)" />
+                            </div>
+
+                            <div class="mb-3 text-muted small">
+                                <p class="mb-1"><strong>Tank Statistics:</strong></p>
+                                <ul class="mb-0">
+                                    <li>Water Tests: @tank.WaterTests.Count</li>
+                                    <li>Livestock: @tank.Livestock.Count</li>
+                                    <li>Equipment: @tank.Equipment.Count</li>
+                                    <li>Maintenance Logs: @tank.MaintenanceLogs.Count</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="card-footer bg-transparent">
+                            <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                                @if (isSubmitting)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    <span>Saving...</span>
+                                }
+                                else
+                                {
+                                    <span>Update Tank</span>
+                                }
+                            </button>
+                            <a href="/tanks" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger mt-3">
+                            @errorMessage
+                        </div>
+                    }
+                </EditForm>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Tank? tank;
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTank();
+    }
+
+    private async Task LoadTank()
+    {
+        isLoading = true;
+        tank = await TankService.GetTankByIdAsync(Id);
+        isLoading = false;
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (tank == null) return;
+
+        isSubmitting = true;
+        errorMessage = null;
+
+        try
+        {
+            await TankService.UpdateTankAsync(tank);
+            Navigation.NavigateTo("/tanks");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred while updating: {ex.Message}";
+            isSubmitting = false;
+        }
+    }
+}
