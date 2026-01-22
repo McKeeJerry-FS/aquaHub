@@ -17,16 +17,63 @@ public class TankService : ITankService
         _fileUploadService = fileUploadService;
     }
 
-    public async Task<Tank> CreateTankAsync(Tank tank)
+    public async Task<List<Tank>> GetAllTanksAsync(string userId)
     {
+        return await _context.Tanks
+            .Where(t => t.UserId == userId)
+            .Include(t => t.WaterTests)
+            .Include(t => t.Livestock)
+            .Include(t => t.Equipment)
+            .Include(t => t.MaintenanceLogs)
+            .ToListAsync();
+    }
+
+    public async Task<Tank?> GetTankByIdAsync(int id, string userId)
+    {
+        return await _context.Tanks
+            .Where(t => t.UserId == userId)
+            .Include(t => t.WaterTests)
+            .Include(t => t.Livestock)
+            .Include(t => t.Equipment)
+            .Include(t => t.MaintenanceLogs)
+            .FirstOrDefaultAsync(t => t.Id == id);
+    }
+
+    public async Task<Tank> CreateTankAsync(Tank tank, string userId)
+    {
+        tank.UserId = userId;
         _context.Tanks.Add(tank);
         await _context.SaveChangesAsync();
         return tank;
     }
 
-    public async Task<bool> DeleteTankAsync(int id)
+    public async Task<Tank> UpdateTankAsync(Tank tank, string userId)
     {
-        var tank = await _context.Tanks.FindAsync(id);
+        // Verify ownership
+        var existingTank = await _context.Tanks
+            .FirstOrDefaultAsync(t => t.Id == tank.Id && t.UserId == userId);
+
+        if (existingTank == null)
+        {
+            throw new UnauthorizedAccessException("You don't have permission to update this tank.");
+        }
+
+        existingTank.Name = tank.Name;
+        existingTank.VolumeGallons = tank.VolumeGallons;
+        existingTank.Type = tank.Type;
+        existingTank.StartDate = tank.StartDate;
+        existingTank.Notes = tank.Notes;
+        existingTank.ImagePath = tank.ImagePath;
+
+        await _context.SaveChangesAsync();
+        return existingTank;
+    }
+
+    public async Task<bool> DeleteTankAsync(int id, string userId)
+    {
+        var tank = await _context.Tanks
+            .FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
+
         if (tank == null) return false;
 
         // Delete associated image if exists
@@ -38,32 +85,5 @@ public class TankService : ITankService
         _context.Tanks.Remove(tank);
         await _context.SaveChangesAsync();
         return true;
-    }
-
-    public async Task<List<Tank>> GetAllTanksAsync()
-    {
-        return await _context.Tanks
-            .Include(t => t.WaterTests)
-            .Include(t => t.Livestock)
-            .Include(t => t.Equipment)
-            .Include(t => t.MaintenanceLogs)
-            .ToListAsync();
-    }
-
-    public async Task<Tank?> GetTankByIdAsync(int id)
-    {
-        return await _context.Tanks
-            .Include(t => t.WaterTests)
-            .Include(t => t.Livestock)
-            .Include(t => t.Equipment)
-            .Include(t => t.MaintenanceLogs)
-            .FirstOrDefaultAsync(t => t.Id == id);
-    }
-
-    public async Task<Tank> UpdateTankAsync(Tank tank)
-    {
-        _context.Tanks.Update(tank);
-        await _context.SaveChangesAsync();
-        return tank;
     }
 }

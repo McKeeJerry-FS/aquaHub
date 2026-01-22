@@ -2,9 +2,13 @@
 @using AquaHub.Services.Interfaces
 @using AquaHub.Models
 @using AquaHub.Models.Enums
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
 @inject ITankService TankService
 @inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @rendermode InteractiveServer
+@attribute [Authorize]
 
 <PageTitle>Delete Tank</PageTitle>
 
@@ -23,7 +27,7 @@
             {
                 <div class="alert alert-danger">
                     <h4>Tank Not Found</h4>
-                    <p>The tank you're looking for doesn't exist.</p>
+                    <p>The tank you're looking for doesn't exist or you don't have permission to delete it.</p>
                     <a href="/tanks" class="btn btn-primary">Back to Tanks</a>
                 </div>
             }
@@ -41,6 +45,13 @@
                         <h5 class="mb-0">Tank Details</h5>
                     </div>
                     <div class="card-body">
+                        @if (!string.IsNullOrEmpty(tank.ImagePath))
+                        {
+                            <div class="mb-3 text-center">
+                                <img src="@tank.ImagePath" alt="@tank.Name" class="img-thumbnail" style="max-height: 200px;" />
+                            </div>
+                        }
+
                         <dl class="row mb-0">
                             <dt class="col-sm-3">Name:</dt>
                             <dd class="col-sm-9">@tank.Name</dd>
@@ -61,8 +72,8 @@
                             }
                         </dl>
 
-                        @if (tank.WaterTests.Count > 0 || tank.Livestock.Count > 0 || 
-                             tank.Equipment.Count > 0 || tank.MaintenanceLogs.Count > 0)
+                        @if (tank.WaterTests.Count > 0 || tank.Livestock.Count > 0 ||
+                                            tank.Equipment.Count > 0 || tank.MaintenanceLogs.Count > 0)
                         {
                             <hr />
                             <div class="alert alert-warning mb-0">
@@ -128,30 +139,43 @@
     private bool isLoading = true;
     private bool isDeleting = false;
     private string? errorMessage;
+    private string? userId;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadTank();
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                await LoadTank();
+            }
+        }
     }
 
     private async Task LoadTank()
     {
+        if (string.IsNullOrEmpty(userId)) return;
+
         isLoading = true;
-        tank = await TankService.GetTankByIdAsync(Id);
+        tank = await TankService.GetTankByIdAsync(Id, userId);
         isLoading = false;
     }
 
     private async Task HandleDelete()
     {
-        if (tank == null) return;
+        if (tank == null || string.IsNullOrEmpty(userId)) return;
 
         isDeleting = true;
         errorMessage = null;
 
         try
         {
-            var success = await TankService.DeleteTankAsync(tank.Id);
-            
+            var success = await TankService.DeleteTankAsync(tank.Id, userId);
+
             if (success)
             {
                 Navigation.NavigateTo("/tanks");

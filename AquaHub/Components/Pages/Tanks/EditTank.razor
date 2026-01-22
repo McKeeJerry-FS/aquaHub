@@ -5,6 +5,11 @@
 @inject ITankService TankService
 @inject IFileUploadService FileUploadService
 @inject NavigationManager Navigation
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize]
+
 @rendermode InteractiveServer
 
 <PageTitle>Edit Tank</PageTitle>
@@ -176,16 +181,29 @@
     private string? newImagePreview;
     private string? currentImagePath;
     private bool removeCurrentImage = false;
+    private string? userId;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadTank();
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                await LoadTank();
+            }
+        }
     }
 
     private async Task LoadTank()
     {
+        if (string.IsNullOrEmpty(userId)) return;
+
         isLoading = true;
-        tank = await TankService.GetTankByIdAsync(Id);
+        tank = await TankService.GetTankByIdAsync(Id, userId);
         if (tank != null)
         {
             currentImagePath = tank.ImagePath;
@@ -199,7 +217,6 @@
 
         if (newImage != null)
         {
-            // Create preview
             try
             {
                 var imageStream = newImage.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
@@ -229,7 +246,7 @@
 
     private async Task HandleSubmit()
     {
-        if (tank == null) return;
+        if (tank == null || string.IsNullOrEmpty(userId)) return;
 
         isSubmitting = true;
         errorMessage = null;
@@ -239,24 +256,21 @@
             // Handle image changes
             if (newImage != null)
             {
-                // Delete old image if exists
                 if (!string.IsNullOrEmpty(currentImagePath))
                 {
                     await FileUploadService.DeleteImageAsync(currentImagePath);
                 }
 
-                // Upload new image
                 using var stream = newImage.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
                 tank.ImagePath = await FileUploadService.SaveImageAsync(stream, newImage.Name);
             }
             else if (removeCurrentImage && !string.IsNullOrEmpty(currentImagePath))
             {
-                // Just remove the image without uploading a new one
                 await FileUploadService.DeleteImageAsync(currentImagePath);
                 tank.ImagePath = null;
             }
 
-            await TankService.UpdateTankAsync(tank);
+            await TankService.UpdateTankAsync(tank, userId);
             Navigation.NavigateTo("/tanks");
         }
         catch (Exception ex)

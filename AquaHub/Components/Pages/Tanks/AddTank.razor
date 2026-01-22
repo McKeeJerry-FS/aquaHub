@@ -3,10 +3,14 @@
 @using AquaHub.Models
 @using AquaHub.Models.Enums
 @using AquaHub.Services.Interfaces
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
 @inject ITankService TankService
 @inject IFileUploadService FileUploadService
 @inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @rendermode InteractiveServer
+@attribute [Authorize]
 
 <PageTitle>Add New Tank</PageTitle>
 
@@ -23,25 +27,29 @@
                     <div class="card-body">
                         <div class="mb-3">
                             <label for="name" class="form-label">Tank Name</label>
-                            <InputText id="name" @bind-Value="tank.Name" class="form-control" placeholder="e.g., Living Room Reef, 75g Planted Tank" />
+                            <InputText id="name" @bind-Value="tank.Name" class="form-control"
+                                placeholder="e.g., Living Room Reef, 75g Planted Tank" />
                             <ValidationMessage For="@(() => tank.Name)" />
                         </div>
 
                         <div class="mb-3">
                             <label for="image" class="form-label">Tank Image (Optional)</label>
-                            <InputFile id="image" OnChange="HandleImageSelected" class="form-control" accept="image/*" />
+                            <InputFile id="image" OnChange="HandleImageSelected" class="form-control"
+                                accept="image/*" />
                             <small class="form-text text-muted">Max size: 5MB. Formats: JPG, PNG, GIF, WebP</small>
                             @if (!string.IsNullOrEmpty(imagePreview))
                             {
                                 <div class="mt-2">
-                                    <img src="@imagePreview" alt="Preview" class="img-thumbnail" style="max-height: 200px;" />
+                                    <img src="@imagePreview" alt="Preview" class="img-thumbnail"
+                                        style="max-height: 200px;" />
                                 </div>
                             }
                         </div>
 
                         <div class="mb-3">
                             <label for="volume" class="form-label">Volume (Gallons)</label>
-                            <InputNumber id="volume" @bind-Value="tank.VolumeGallons" class="form-control" placeholder="e.g., 55" />
+                            <InputNumber id="volume" @bind-Value="tank.VolumeGallons" class="form-control"
+                                placeholder="e.g., 55" />
                             <ValidationMessage For="@(() => tank.VolumeGallons)" />
                         </div>
 
@@ -65,7 +73,8 @@
 
                         <div class="mb-3">
                             <label for="notes" class="form-label">Notes (Optional)</label>
-                            <InputTextArea id="notes" @bind-Value="tank.Notes" class="form-control" rows="4" placeholder="Any additional information about your tank..." />
+                            <InputTextArea id="notes" @bind-Value="tank.Notes" class="form-control" rows="4"
+                                placeholder="Any additional information about your tank..." />
                             <ValidationMessage For="@(() => tank.Notes)" />
                         </div>
                     </div>
@@ -103,11 +112,23 @@
     private string? errorMessage;
     private IBrowserFile? selectedImage;
     private string? imagePreview;
+    private string? userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        }
+    }
 
     private async Task HandleImageSelected(InputFileChangeEventArgs e)
     {
         selectedImage = e.File;
-        
+
         if (selectedImage != null)
         {
             // Create preview
@@ -115,7 +136,7 @@
             var ms = new MemoryStream();
             await imageStream.CopyToAsync(ms);
             ms.Position = 0;
-            
+
             var base64 = Convert.ToBase64String(ms.ToArray());
             imagePreview = $"data:{selectedImage.ContentType};base64,{base64}";
         }
@@ -123,6 +144,12 @@
 
     private async Task HandleSubmit()
     {
+        if (string.IsNullOrEmpty(userId))
+        {
+            errorMessage = "User not authenticated.";
+            return;
+        }
+
         isSubmitting = true;
         errorMessage = null;
 
@@ -135,7 +162,7 @@
                 tank.ImagePath = await FileUploadService.SaveImageAsync(stream, selectedImage.Name);
             }
 
-            await TankService.CreateTankAsync(tank);
+            await TankService.CreateTankAsync(tank, userId);
             Navigation.NavigateTo("/tanks");
         }
         catch (Exception ex)
