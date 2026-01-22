@@ -3,6 +3,7 @@
 @using AquaHub.Models
 @using AquaHub.Models.Enums
 @inject ITankService TankService
+@inject IFileUploadService FileUploadService
 @inject NavigationManager Navigation
 @rendermode InteractiveServer
 
@@ -39,13 +40,64 @@
                         <div class="card-body">
                             <div class="mb-3">
                                 <label for="name" class="form-label">Tank Name</label>
-                                <InputText id="name" @bind-Value="tank.Name" class="form-control" placeholder="e.g., Living Room Reef, 75g Planted Tank" />
+                                <InputText id="name" @bind-Value="tank.Name" class="form-control"
+                                    placeholder="e.g., Living Room Reef, 75g Planted Tank" />
                                 <ValidationMessage For="@(() => tank.Name)" />
                             </div>
 
                             <div class="mb-3">
+                                <label for="image" class="form-label">Tank Image</label>
+
+                                @if (!string.IsNullOrEmpty(currentImagePath) && !removeCurrentImage)
+                                {
+                                    <div class="mb-2">
+                                        <img src="@currentImagePath" alt="Current tank image" class="img-thumbnail"
+                                            style="max-height: 200px;" />
+                                        <div class="mt-2">
+                                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                                @onclick="RemoveCurrentImage">
+                                                <i class="bi bi-trash"></i> Remove Current Image
+                                            </button>
+                                        </div>
+                                    </div>
+                                }
+                                else if (removeCurrentImage)
+                                {
+                                    <div class="alert alert-warning py-2 mb-2">
+                                        <small>Current image will be removed when you save.</small>
+                                        <button type="button" class="btn btn-sm btn-link"
+                                            @onclick="UndoRemoveImage">Undo</button>
+                                    </div>
+                                }
+
+                                <InputFile id="image" OnChange="HandleImageSelected" class="form-control"
+                                    accept="image/*" />
+                                <small class="form-text text-muted">
+                                    @if (string.IsNullOrEmpty(currentImagePath) || removeCurrentImage)
+                                    {
+                                        <span>Upload a new image. Max size: 5MB. Formats: JPG, PNG, GIF, WebP</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Upload a new image to replace the current one. Max size: 5MB. Formats: JPG, PNG,
+                                            GIF, WebP</span>
+                                    }
+                                </small>
+
+                                @if (!string.IsNullOrEmpty(newImagePreview))
+                                {
+                                    <div class="mt-2">
+                                        <p class="mb-1"><strong>New Image Preview:</strong></p>
+                                        <img src="@newImagePreview" alt="Preview" class="img-thumbnail"
+                                            style="max-height: 200px;" />
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="mb-3">
                                 <label for="volume" class="form-label">Volume (Gallons)</label>
-                                <InputNumber id="volume" @bind-Value="tank.VolumeGallons" class="form-control" placeholder="e.g., 55" />
+                                <InputNumber id="volume" @bind-Value="tank.VolumeGallons" class="form-control"
+                                    placeholder="e.g., 55" />
                                 <ValidationMessage For="@(() => tank.VolumeGallons)" />
                             </div>
 
@@ -68,7 +120,8 @@
 
                             <div class="mb-3">
                                 <label for="notes" class="form-label">Notes (Optional)</label>
-                                <InputTextArea id="notes" @bind-Value="tank.Notes" class="form-control" rows="4" placeholder="Any additional information about your tank..." />
+                                <InputTextArea id="notes" @bind-Value="tank.Notes" class="form-control" rows="4"
+                                    placeholder="Any additional information about your tank..." />
                                 <ValidationMessage For="@(() => tank.Notes)" />
                             </div>
 
@@ -119,6 +172,10 @@
     private bool isLoading = true;
     private bool isSubmitting = false;
     private string? errorMessage;
+    private IBrowserFile? newImage;
+    private string? newImagePreview;
+    private string? currentImagePath;
+    private bool removeCurrentImage = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -129,7 +186,45 @@
     {
         isLoading = true;
         tank = await TankService.GetTankByIdAsync(Id);
+        if (tank != null)
+        {
+            currentImagePath = tank.ImagePath;
+        }
         isLoading = false;
+    }
+
+    private async Task HandleImageSelected(InputFileChangeEventArgs e)
+    {
+        newImage = e.File;
+
+        if (newImage != null)
+        {
+            // Create preview
+            try
+            {
+                var imageStream = newImage.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+                var ms = new MemoryStream();
+                await imageStream.CopyToAsync(ms);
+                ms.Position = 0;
+
+                var base64 = Convert.ToBase64String(ms.ToArray());
+                newImagePreview = $"data:{newImage.ContentType};base64,{base64}";
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Error loading image preview: {ex.Message}";
+            }
+        }
+    }
+
+    private void RemoveCurrentImage()
+    {
+        removeCurrentImage = true;
+    }
+
+    private void UndoRemoveImage()
+    {
+        removeCurrentImage = false;
     }
 
     private async Task HandleSubmit()
@@ -141,6 +236,26 @@
 
         try
         {
+            // Handle image changes
+            if (newImage != null)
+            {
+                // Delete old image if exists
+                if (!string.IsNullOrEmpty(currentImagePath))
+                {
+                    await FileUploadService.DeleteImageAsync(currentImagePath);
+                }
+
+                // Upload new image
+                using var stream = newImage.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+                tank.ImagePath = await FileUploadService.SaveImageAsync(stream, newImage.Name);
+            }
+            else if (removeCurrentImage && !string.IsNullOrEmpty(currentImagePath))
+            {
+                // Just remove the image without uploading a new one
+                await FileUploadService.DeleteImageAsync(currentImagePath);
+                tank.ImagePath = null;
+            }
+
             await TankService.UpdateTankAsync(tank);
             Navigation.NavigateTo("/tanks");
         }
