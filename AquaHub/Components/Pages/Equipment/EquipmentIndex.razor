@@ -1,0 +1,476 @@
+﻿@page "/equipment"
+@using AquaHub.Services.Interfaces
+@using AquaHub.Models
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@inject IEquipmentService EquipmentService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+<PageTitle>My Equipment</PageTitle>
+
+<div class="equipment-page">
+    <!-- Header Section -->
+    <div class="page-header">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center py-4">
+                <div>
+                    <h1 class="display-5 fw-bold mb-2">
+                        <i class="bi bi-gear-fill text-primary me-2"></i>
+                        My Equipment
+                    </h1>
+                    <p class="text-muted mb-0">Manage and monitor all your aquarium equipment</p>
+                </div>
+                <a href="/tanks" class="btn btn-primary btn-lg shadow-sm">
+                    <i class="bi bi-arrow-left me-2"></i> Back to Tanks
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container py-4">
+        @if (isLoading)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="text-muted mt-3">Loading your equipment...</p>
+            </div>
+        }
+        else if (equipment == null || !equipment.Any())
+        {
+            <div class="empty-state">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-gear display-1 text-primary mb-3"></i>
+                        <h3 class="mb-3">No Equipment Yet</h3>
+                        <p class="text-muted mb-4">Add equipment from your tank's dashboard to start tracking maintenance!
+                        </p>
+                        <a href="/tanks" class="btn btn-primary btn-lg">
+                            <i class="bi bi-arrow-left me-2"></i> Go to Tanks
+                        </a>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <!-- Stats Summary -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="bi bi-gear-fill"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>@equipment.Count</h3>
+                            <p>Total Equipment</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon bg-warning">
+                            <i class="bi bi-funnel-fill"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>@(equipment.OfType<Filter>().Count())</h3>
+                            <p>Filters</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon bg-info">
+                            <i class="bi bi-lightbulb-fill"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>@(equipment.OfType<Light>().Count())</h3>
+                            <p>Lights</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon bg-success">
+                            <i class="bi bi-recycle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>@(equipment.OfType<ProteinSkimmer>().Count())</h3>
+                            <p>Protein Skimmers</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Equipment Grid -->
+            <div class="row g-4">
+                @foreach (var item in equipment)
+                {
+                    <div class="col-md-6 col-lg-4">
+                        <div class="equipment-card">
+                            <div class="equipment-type-header @GetEquipmentTypeClass(item)">
+                                <i class="@GetEquipmentIcon(item)"></i>
+                                <span>@GetEquipmentTypeName(item)</span>
+                            </div>
+
+                            <div class="equipment-card-body">
+                                <h5 class="equipment-title">@item.Brand @item.Model</h5>
+
+                                <div class="equipment-details">
+                                    <div class="detail-item">
+                                        <i class="bi bi-droplet text-primary"></i>
+                                        <span>@item.Tank?.Name</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <i class="bi bi-calendar3 text-success"></i>
+                                        <span>Installed: @item.InstalledOn.ToShortDateString()</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <i class="bi bi-clock text-info"></i>
+                                        <span>@((DateTime.Now - item.InstalledOn).Days) days old</span>
+                                    </div>
+                                </div>
+
+                                @if (item is Filter filter)
+                                {
+                                    <div class="equipment-specs">
+                                        <p><strong>Type:</strong> @filter.Type</p>
+                                        <p><strong>Flow Rate:</strong> @filter.FlowRate GPH</p>
+                                        @if (!string.IsNullOrEmpty(filter.Media))
+                                        {
+                                            <p><strong>Media:</strong> @filter.Media</p>
+                                        }
+                                    </div>
+                                }
+                                else if (item is Light light)
+                                {
+                                    <div class="equipment-specs">
+                                        <p><strong>Wattage:</strong> @light.Wattage W</p>
+                                        @if (!string.IsNullOrEmpty(light.Spectrum))
+                                        {
+                                            <p><strong>Spectrum:</strong> @light.Spectrum</p>
+                                        }
+                                        @if (light.IsDimmable)
+                                        {
+                                            <p><strong>Intensity:</strong> @light.IntensityPercent%</p>
+                                        }
+                                    </div>
+                                }
+                                else if (item is ProteinSkimmer skimmer)
+                                {
+                                    <div class="equipment-specs">
+                                        <p><strong>Capacity:</strong> @skimmer.Capacity gal</p>
+                                        @if (!string.IsNullOrEmpty(skimmer.Type))
+                                        {
+                                            <p><strong>Type:</strong> @skimmer.Type</p>
+                                        }
+                                        <p><strong>Cup Level:</strong> @skimmer.CupFillLevel%</p>
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="equipment-card-footer">
+                                <a href="/equipment/dashboard/@item.Id" class="btn btn-info btn-sm">
+                                    <i class="bi bi-speedometer2"></i> Dashboard
+                                </a>
+                                <a href="/equipment/edit/@item.Id" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </a>
+                                <a href="/equipment/delete/@item.Id" class="btn btn-outline-danger btn-sm">
+                                    <i class="bi bi-trash"></i> Delete
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .equipment-page {
+        background: linear-gradient(180deg, #f3e5f5 0%, #ffffff 100%);
+        min-height: 100vh;
+    }
+
+    .page-header {
+        background: linear-gradient(135deg, #7b1fa2 0%, #4a148c 100%);
+        color: white;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .page-header h1 {
+        color: white;
+    }
+
+    .page-header .text-primary {
+        color: #ce93d8 !important;
+    }
+
+    /* Stat Cards */
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(123, 31, 162, 0.1);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(123, 31, 162, 0.2);
+    }
+
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, #7b1fa2 0%, #4a148c 100%);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.75rem;
+        color: white;
+    }
+
+    .stat-icon.bg-warning {
+        background: linear-gradient(135deg, #ff9800 0%, #ef6c00 100%);
+    }
+
+    .stat-icon.bg-info {
+        background: linear-gradient(135deg, #00bcd4 0%, #0097a7 100%);
+    }
+
+    .stat-icon.bg-success {
+        background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+    }
+
+    .stat-content h3 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 700;
+        color: #4a148c;
+    }
+
+    .stat-content p {
+        margin: 0;
+        color: #546e7a;
+        font-size: 0.9rem;
+    }
+
+    /* Equipment Cards */
+    .equipment-card {
+        background: white;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(123, 31, 162, 0.15);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .equipment-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 12px 24px rgba(123, 31, 162, 0.25);
+    }
+
+    .equipment-type-header {
+        padding: 1rem;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+
+    .equipment-type-header i {
+        font-size: 1.5rem;
+    }
+
+    .equipment-type-header.filter-type {
+        background: linear-gradient(135deg, #ff9800 0%, #ef6c00 100%);
+    }
+
+    .equipment-type-header.light-type {
+        background: linear-gradient(135deg, #00bcd4 0%, #0097a7 100%);
+    }
+
+    .equipment-type-header.skimmer-type {
+        background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+    }
+
+    .equipment-type-header.default-type {
+        background: linear-gradient(135deg, #7b1fa2 0%, #4a148c 100%);
+    }
+
+    .equipment-card-body {
+        padding: 1.5rem;
+        flex: 1;
+    }
+
+    .equipment-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #4a148c;
+        margin-bottom: 1rem;
+    }
+
+    .equipment-details {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .detail-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        color: #546e7a;
+    }
+
+    .detail-item i {
+        font-size: 1rem;
+    }
+
+    .equipment-specs {
+        font-size: 0.9rem;
+        color: #616161;
+    }
+
+    .equipment-specs p {
+        margin-bottom: 0.5rem;
+    }
+
+    .equipment-card-footer {
+        padding: 1rem 1.5rem;
+        background: #f5f5f5;
+        border-top: 1px solid #e0e0e0;
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .equipment-card-footer .btn {
+        flex: 1;
+        font-size: 0.85rem;
+    }
+
+    /* Empty State */
+    .empty-state {
+        max-width: 600px;
+        margin: 4rem auto;
+    }
+
+    .empty-state .card {
+        border-radius: 16px;
+    }
+
+    .empty-state i {
+        color: #7b1fa2;
+    }
+
+    /* Buttons */
+    .btn-primary {
+        background: linear-gradient(135deg, #7b1fa2 0%, #4a148c 100%);
+        border: none;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #6a1b9a 0%, #38006b 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(123, 31, 162, 0.3);
+    }
+
+    @@media (max-width: 768px) {
+        .page-header .d-flex {
+            flex-direction: column;
+            gap: 1rem;
+            align-items: flex-start !important;
+        }
+
+        .stat-card {
+            margin-bottom: 1rem;
+        }
+
+        .equipment-card-footer {
+            flex-direction: column;
+        }
+    }
+</style>
+
+@code {
+    private List<Equipment>? equipment;
+    private bool isLoading = true;
+    private string? userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                await LoadEquipment();
+            }
+        }
+    }
+
+    private async Task LoadEquipment()
+    {
+        if (string.IsNullOrEmpty(userId)) return;
+
+        isLoading = true;
+        equipment = await EquipmentService.GetAllEquipmentAsync(userId);
+        isLoading = false;
+    }
+
+    private string GetEquipmentTypeName(Equipment equipment)
+    {
+        return equipment switch
+        {
+            Filter => "Filter",
+            Light => "Light",
+            ProteinSkimmer => "Protein Skimmer",
+            _ => "Equipment"
+        };
+    }
+
+    private string GetEquipmentIcon(Equipment equipment)
+    {
+        return equipment switch
+        {
+            Filter => "bi bi-funnel-fill",
+            Light => "bi bi-lightbulb-fill",
+            ProteinSkimmer => "bi bi-recycle",
+            _ => "bi bi-gear-fill"
+        };
+    }
+
+    private string GetEquipmentTypeClass(Equipment equipment)
+    {
+        return equipment switch
+        {
+            Filter => "filter-type",
+            Light => "light-type",
+            ProteinSkimmer => "skimmer-type",
+            _ => "default-type"
+        };
+    }
+}

@@ -12,6 +12,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Plant> Plants { get; set; }
     public DbSet<Filter> Filters { get; set; }
     public DbSet<Light> Lights { get; set; }
+    public DbSet<Heater> Heaters { get; set; }
     public DbSet<ProteinSkimmer> ProteinSkimmers { get; set; }
     public DbSet<WaterTest> WaterTests { get; set; }
     public DbSet<MaintenanceLog> MaintenanceLogs { get; set; }
