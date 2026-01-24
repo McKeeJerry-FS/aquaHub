@@ -1,0 +1,302 @@
+﻿@page "/tanks/{TankId:int}/equipment/add"
+@using AquaHub.Services.Interfaces
+@using AquaHub.Models
+@using AquaHub.Models.Enums
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@inject IEquipmentService EquipmentService
+@inject ITankService TankService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+<PageTitle>Add Equipment</PageTitle>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">
+                        <i class="bi bi-plus-circle me-2"></i>
+                        Add Equipment to @tank?.Name
+                    </h3>
+                </div>
+                <div class="card-body">
+                    @if (isLoading)
+                    {
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (tank == null)
+                    {
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle"></i> Tank not found.
+                        </div>
+                    }
+                    else
+                    {
+                        <EditForm Model="equipmentModel" OnValidSubmit="HandleSubmit">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="alert alert-danger" />
+
+                            <!-- Equipment Type Selection -->
+                            <div class="mb-3">
+                                <label class="form-label">Equipment Type *</label>
+                                <select class="form-select" @bind="selectedEquipmentType">
+                                    <option value="">-- Select Type --</option>
+                                    <option value="Filter">Filter</option>
+                                    <option value="Light">Light</option>
+                                    <option value="ProteinSkimmer">Protein Skimmer</option>
+                                </select>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(selectedEquipmentType))
+                            {
+                                <!-- Common Fields -->
+                                <div class="mb-3">
+                                    <label class="form-label">Brand *</label>
+                                    <InputText class="form-control" @bind-Value="equipmentModel.Brand" />
+                                    <ValidationMessage For="@(() => equipmentModel.Brand)" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Model *</label>
+                                    <InputText class="form-control" @bind-Value="equipmentModel.Model" />
+                                    <ValidationMessage For="@(() => equipmentModel.Model)" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Installed On *</label>
+                                    <InputDate class="form-control" @bind-Value="equipmentModel.InstalledOn" />
+                                    <ValidationMessage For="@(() => equipmentModel.InstalledOn)" />
+                                </div>
+
+                                <!-- Type-Specific Fields -->
+                                @if (selectedEquipmentType == "Filter")
+                                {
+                                    <hr class="my-4" />
+                                    <h5 class="mb-3">Filter Specifications</h5>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Filter Type *</label>
+                                        <InputSelect class="form-select" @bind-Value="filterModel.Type">
+                                            <option value="">-- Select Filter Type --</option>
+                                            @foreach (var type in Enum.GetValues<FilterType>())
+                                            {
+                                                <option value="@type">@type</option>
+                                            }
+                                        </InputSelect>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Flow Rate (GPH) *</label>
+                                        <InputNumber class="form-control" @bind-Value="filterModel.FlowRate" />
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Media</label>
+                                        <InputText class="form-control" @bind-Value="filterModel.Media" />
+                                    </div>
+                                }
+                                else if (selectedEquipmentType == "Light")
+                                {
+                                    <hr class="my-4" />
+                                    <h5 class="mb-3">Light Specifications</h5>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Wattage *</label>
+                                        <InputNumber class="form-control" @bind-Value="lightModel.Wattage" />
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Spectrum</label>
+                                        <InputText class="form-control" @bind-Value="lightModel.Spectrum"
+                                            placeholder="e.g., Full Spectrum, RGB, etc." />
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <InputCheckbox class="form-check-input" @bind-Value="lightModel.IsDimmable" />
+                                            <label class="form-check-label">Dimmable</label>
+                                        </div>
+                                    </div>
+
+                                    @if (lightModel.IsDimmable)
+                                    {
+                                        <div class="mb-3">
+                                            <label class="form-label">Current Intensity (%)</label>
+                                            <InputNumber class="form-control" @bind-Value="lightModel.IntensityPercent" min="0"
+                                                max="100" />
+                                        </div>
+                                    }
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Schedule</label>
+                                        <InputText class="form-control" @bind-Value="lightModel.Schedule"
+                                            placeholder="e.g., 8am-8pm" />
+                                    </div>
+                                }
+                                else if (selectedEquipmentType == "ProteinSkimmer")
+                                {
+                                    <hr class="my-4" />
+                                    <h5 class="mb-3">Protein Skimmer Specifications</h5>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Capacity (gallons) *</label>
+                                        <InputNumber class="form-control" @bind-Value="skimmerModel.Capacity" />
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Type</label>
+                                        <InputText class="form-control" @bind-Value="skimmerModel.Type"
+                                            placeholder="e.g., In-Sump, Hang-On-Back" />
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Air Intake</label>
+                                        <InputNumber class="form-control" @bind-Value="skimmerModel.AirIntake" />
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Cup Fill Level (%)</label>
+                                        <InputNumber class="form-control" @bind-Value="skimmerModel.CupFillLevel" min="0"
+                                            max="100" />
+                                    </div>
+                                }
+                            }
+
+                            <div class="d-flex gap-2 mt-4">
+                                <button type="submit" class="btn btn-primary"
+                                    disabled="@(string.IsNullOrEmpty(selectedEquipmentType))">
+                                    <i class="bi bi-check-circle me-2"></i>Add Equipment
+                                </button>
+                                <a href="/tanks/dashboard/@TankId" class="btn btn-secondary">
+                                    <i class="bi bi-x-circle me-2"></i>Cancel
+                                </a>
+                            </div>
+                        </EditForm>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int TankId { get; set; }
+
+    private Tank? tank;
+    private bool isLoading = true;
+    private string? userId;
+    private string selectedEquipmentType = "";
+
+    private EquipmentFormModel equipmentModel = new();
+    private FilterFormModel filterModel = new();
+    private LightFormModel lightModel = new();
+    private ProteinSkimmerFormModel skimmerModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId != null)
+            {
+                tank = await TankService.GetTankByIdAsync(TankId, userId);
+                equipmentModel.InstalledOn = DateTime.Now;
+            }
+        }
+        isLoading = false;
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (userId == null || tank == null) return;
+
+        try
+        {
+            Equipment equipment = selectedEquipmentType switch
+            {
+                "Filter" => new Filter
+                {
+                    Brand = equipmentModel.Brand,
+                    Model = equipmentModel.Model,
+                    InstalledOn = equipmentModel.InstalledOn,
+                    Type = filterModel.Type,
+                    FlowRate = filterModel.FlowRate,
+                    Media = filterModel.Media
+                },
+                "Light" => new Light
+                {
+                    Brand = equipmentModel.Brand,
+                    Model = equipmentModel.Model,
+                    InstalledOn = equipmentModel.InstalledOn,
+                    Wattage = lightModel.Wattage,
+                    Spectrum = lightModel.Spectrum,
+                    IsDimmable = lightModel.IsDimmable,
+                    IntensityPercent = lightModel.IntensityPercent,
+                    Schedule = lightModel.Schedule
+                },
+                "ProteinSkimmer" => new ProteinSkimmer
+                {
+                    Brand = equipmentModel.Brand,
+                    Model = equipmentModel.Model,
+                    InstalledOn = equipmentModel.InstalledOn,
+                    Capacity = skimmerModel.Capacity,
+                    Type = skimmerModel.Type,
+                    AirIntake = skimmerModel.AirIntake,
+                    CupFillLevel = skimmerModel.CupFillLevel
+                },
+                _ => throw new InvalidOperationException("Invalid equipment type")
+            };
+
+            await EquipmentService.CreateEquipmentAsync(equipment, TankId, userId);
+            Navigation.NavigateTo($"/tanks/dashboard/{TankId}");
+        }
+        catch (Exception ex)
+        {
+            // Handle error
+            Console.WriteLine($"Error adding equipment: {ex.Message}");
+        }
+    }
+
+    public class EquipmentFormModel
+    {
+        public string Brand { get; set; } = string.Empty;
+        public string Model { get; set; } = string.Empty;
+        public DateTime InstalledOn { get; set; } = DateTime.Now;
+    }
+
+    public class FilterFormModel
+    {
+        public FilterType Type { get; set; }
+        public double FlowRate { get; set; }
+        public string Media { get; set; } = string.Empty;
+    }
+
+    public class LightFormModel
+    {
+        public double Wattage { get; set; }
+        public string Spectrum { get; set; } = string.Empty;
+        public bool IsDimmable { get; set; }
+        public int IntensityPercent { get; set; } = 100;
+        public string Schedule { get; set; } = string.Empty;
+    }
+
+    public class ProteinSkimmerFormModel
+    {
+        public double Capacity { get; set; }
+        public string Type { get; set; } = string.Empty;
+        public int AirIntake { get; set; }
+        public int CupFillLevel { get; set; }
+    }
+}

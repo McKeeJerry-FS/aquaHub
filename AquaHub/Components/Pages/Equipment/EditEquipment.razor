@@ -1,0 +1,220 @@
+﻿@page "/equipment/edit/{Id:int}"
+@using AquaHub.Services.Interfaces
+@using AquaHub.Models
+@using AquaHub.Models.Enums
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@inject IEquipmentService EquipmentService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+<PageTitle>Edit Equipment</PageTitle>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-warning text-dark">
+                    <h3 class="mb-0">
+                        <i class="bi bi-pencil me-2"></i>
+                        Edit Equipment
+                    </h3>
+                </div>
+                <div class="card-body">
+                    @if (isLoading)
+                    {
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (equipment == null)
+                    {
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle"></i> Equipment not found.
+                        </div>
+                    }
+                    else
+                    {
+                        <EditForm Model="equipment" OnValidSubmit="HandleSubmit">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="alert alert-danger" />
+
+                            <!-- Equipment Type (Display Only) -->
+                            <div class="mb-3">
+                                <label class="form-label">Equipment Type</label>
+                                <input type="text" class="form-control" value="@GetEquipmentTypeName()" disabled />
+                            </div>
+
+                            <!-- Common Fields -->
+                            <div class="mb-3">
+                                <label class="form-label">Brand *</label>
+                                <InputText class="form-control" @bind-Value="equipment.Brand" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Model *</label>
+                                <InputText class="form-control" @bind-Value="equipment.Model" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Installed On *</label>
+                                <InputDate class="form-control" @bind-Value="equipment.InstalledOn" />
+                            </div>
+
+                            <!-- Type-Specific Fields -->
+                            @if (equipment is Filter filter)
+                            {
+                                <hr class="my-4" />
+                                <h5 class="mb-3">Filter Specifications</h5>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Filter Type *</label>
+                                    <InputSelect class="form-select" @bind-Value="filter.Type">
+                                        @foreach (var type in Enum.GetValues<FilterType>())
+                                        {
+                                            <option value="@type">@type</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Flow Rate (GPH) *</label>
+                                    <InputNumber class="form-control" @bind-Value="filter.FlowRate" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Media</label>
+                                    <InputText class="form-control" @bind-Value="filter.Media" />
+                                </div>
+                            }
+                            else if (equipment is Light light)
+                            {
+                                <hr class="my-4" />
+                                <h5 class="mb-3">Light Specifications</h5>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Wattage *</label>
+                                    <InputNumber class="form-control" @bind-Value="light.Wattage" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Spectrum</label>
+                                    <InputText class="form-control" @bind-Value="light.Spectrum" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <InputCheckbox class="form-check-input" @bind-Value="light.IsDimmable" />
+                                        <label class="form-check-label">Dimmable</label>
+                                    </div>
+                                </div>
+
+                                @if (light.IsDimmable)
+                                {
+                                    <div class="mb-3">
+                                        <label class="form-label">Current Intensity (%)</label>
+                                        <InputNumber class="form-control" @bind-Value="light.IntensityPercent" min="0" max="100" />
+                                    </div>
+                                }
+
+                                <div class="mb-3">
+                                    <label class="form-label">Schedule</label>
+                                    <InputText class="form-control" @bind-Value="light.Schedule" />
+                                </div>
+                            }
+                            else if (equipment is ProteinSkimmer skimmer)
+                            {
+                                <hr class="my-4" />
+                                <h5 class="mb-3">Protein Skimmer Specifications</h5>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Capacity (gallons) *</label>
+                                    <InputNumber class="form-control" @bind-Value="skimmer.Capacity" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Type</label>
+                                    <InputText class="form-control" @bind-Value="skimmer.Type" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Air Intake</label>
+                                    <InputNumber class="form-control" @bind-Value="skimmer.AirIntake" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Cup Fill Level (%)</label>
+                                    <InputNumber class="form-control" @bind-Value="skimmer.CupFillLevel" min="0" max="100" />
+                                </div>
+                            }
+
+                            <div class="d-flex gap-2 mt-4">
+                                <button type="submit" class="btn btn-warning">
+                                    <i class="bi bi-check-circle me-2"></i>Update Equipment
+                                </button>
+                                <a href="/equipment/dashboard/@Id" class="btn btn-secondary">
+                                    <i class="bi bi-x-circle me-2"></i>Cancel
+                                </a>
+                            </div>
+                        </EditForm>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Equipment? equipment;
+    private bool isLoading = true;
+    private string? userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId != null)
+            {
+                equipment = await EquipmentService.GetEquipmentByIdAsync(Id, userId);
+            }
+        }
+        isLoading = false;
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (userId == null || equipment == null) return;
+
+        try
+        {
+            await EquipmentService.UpdateEquipmentAsync(equipment, userId);
+            Navigation.NavigateTo($"/equipment/dashboard/{Id}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error updating equipment: {ex.Message}");
+        }
+    }
+
+    private string GetEquipmentTypeName()
+    {
+        return equipment switch
+        {
+            Filter => "Filter",
+            Light => "Light",
+            ProteinSkimmer => "Protein Skimmer",
+            _ => "Equipment"
+        };
+    }
+}

@@ -1,9 +1,11 @@
 ﻿@page "/equipment"
+@using AquaHub.Services
 @using AquaHub.Services.Interfaces
 @using AquaHub.Models
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Authorization
 @inject IEquipmentService EquipmentService
+@inject ITankService TankService
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @rendermode InteractiveServer
@@ -23,9 +25,30 @@
                     </h1>
                     <p class="text-muted mb-0">Manage and monitor all your aquarium equipment</p>
                 </div>
-                <a href="/tanks" class="btn btn-primary btn-lg shadow-sm">
-                    <i class="bi bi-arrow-left me-2"></i> Back to Tanks
-                </a>
+                <div class="d-flex gap-2">
+                    @if (availableTanks.Any())
+                    {
+                        @if (availableTanks.Count == 1)
+                        {
+                            <a href="/tanks/@availableTanks[0].Id/equipment/add" class="btn btn-success btn-lg shadow-sm">
+                                <i class="bi bi-plus-circle me-2"></i> Add Equipment
+                            </a>
+                        }
+                        else
+                        {
+                            <select class="form-select form-select-lg" style="width: auto;" @onchange="NavigateToAddEquipment">
+                                <option value="">+ Add Equipment to Tank...</option>
+                                @foreach (var tank in availableTanks)
+                                {
+                                    <option value="@tank.Id">@tank.Name</option>
+                                }
+                            </select>
+                        }
+                    }
+                    <a href="/tanks" class="btn btn-secondary btn-lg shadow-sm">
+                        <i class="bi bi-arrow-left me-2"></i> Back to Tanks
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -414,6 +437,7 @@
 
 @code {
     private List<Equipment>? equipment;
+    private List<Tank> availableTanks = new();
     private bool isLoading = true;
     private string? userId;
 
@@ -428,6 +452,7 @@
             if (!string.IsNullOrEmpty(userId))
             {
                 await LoadEquipment();
+                await LoadTanks();
             }
         }
     }
@@ -439,6 +464,12 @@
         isLoading = true;
         equipment = await EquipmentService.GetAllEquipmentAsync(userId);
         isLoading = false;
+    }
+
+    private async Task LoadTanks()
+    {
+        if (string.IsNullOrEmpty(userId)) return;
+        availableTanks = await TankService.GetAllTanksAsync(userId);
     }
 
     private string GetEquipmentTypeName(Equipment equipment)
@@ -472,5 +503,14 @@
             ProteinSkimmer => "skimmer-type",
             _ => "default-type"
         };
+    }
+
+    private void NavigateToAddEquipment(ChangeEventArgs e)
+    {
+        if (e.Value != null && !string.IsNullOrEmpty(e.Value.ToString()))
+        {
+            var tankId = e.Value.ToString();
+            Navigation.NavigateTo($"/tanks/{tankId}/equipment/add");
+        }
     }
 }

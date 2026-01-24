@@ -202,6 +202,18 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9Db3VudGVyLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
+[/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Pages/Equipment/AddEquipment.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9FcXVpcG1lbnQvQWRkRXF1aXBtZW50LnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Pages/Equipment/DeleteEquipment.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9FcXVpcG1lbnQvRGVsZXRlRXF1aXBtZW50LnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Pages/Equipment/EditEquipment.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9FcXVpcG1lbnQvRWRpdEVxdWlwbWVudC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
 [/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Pages/Equipment/EquipmentDashboard.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9FcXVpcG1lbnQvRXF1aXBtZW50RGFzaGJvYXJkLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
