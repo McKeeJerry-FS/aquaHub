@@ -230,6 +230,22 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9Ib21lLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
+[/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Pages/Livestock/DeleteLivestock.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9MaXZlc3RvY2svRGVsZXRlTGl2ZXN0b2NrLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Pages/Livestock/EditLivestock.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9MaXZlc3RvY2svRWRpdExpdmVzdG9jay5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Pages/Livestock/LivestockDashboard.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9MaXZlc3RvY2svTGl2ZXN0b2NrRGFzaGJvYXJkLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Pages/Livestock/LivestockIndex.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9MaXZlc3RvY2svTGl2ZXN0b2NrSW5kZXgucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
 [/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Pages/NotFound.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9Ob3RGb3VuZC5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
@@ -277,3 +293,7 @@ build_metadata.AdditionalFiles.CssScope = b-xsu3zf4t0a
 [/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Layout/ReconnectModal.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9MYXlvdXQvUmVjb25uZWN0TW9kYWwucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = b-jw5cvsgwuz
+
+[/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Pages/Livestock/AddLivestock.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9MaXZlc3RvY2svQWRkTGl2ZXN0b2NrLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-febl9hvrqu

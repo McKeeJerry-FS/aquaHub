@@ -1,0 +1,656 @@
+﻿@page "/livestock/edit/{Id:int}"
+@using AquaHub.Services.Interfaces
+@using AquaHub.Models
+@using AquaHub.Models.Enums
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@inject ILivestockService LivestockService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+<PageTitle>Edit Livestock</PageTitle>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow">
+                <div class="card-header bg-warning text-dark">
+                    <h3 class="mb-0">
+                        <i class="bi bi-pencil me-2"></i>
+                        Edit @livestock?.Name
+                    </h3>
+                </div>
+                <div class="card-body">
+                    @if (isLoading)
+                    {
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (livestock == null)
+                    {
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle"></i> Livestock not found.
+                        </div>
+                    }
+                    else
+                    {
+                        <EditForm Model="livestock" OnValidSubmit="HandleSubmit">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="alert alert-danger" />
+
+                            <!-- Common Fields -->
+                            <div class="card mb-3">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">Basic Information</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Livestock Type</label>
+                                            <input type="text" class="form-control" value="@GetLivestockTypeName()"
+                                                disabled />
+                                        </div>
+
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Name *</label>
+                                            <InputText class="form-control" @bind-Value="livestock.Name" />
+                                            <ValidationMessage For="@(() => livestock.Name)" />
+                                        </div>
+
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Species *</label>
+                                            <InputText class="form-control" @bind-Value="livestock.Species" />
+                                            <ValidationMessage For="@(() => livestock.Species)" />
+                                        </div>
+
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Added On *</label>
+                                            <InputDate class="form-control" @bind-Value="livestock.AddedOn" />
+                                            <ValidationMessage For="@(() => livestock.AddedOn)" />
+                                        </div>
+
+                                        <div class="col-12 mb-3">
+                                            <label class="form-label">Notes</label>
+                                            <InputTextArea class="form-control" @bind-Value="livestock.Notes" rows="3" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Type-Specific Fields -->
+                            @switch (livestock)
+                            {
+                                case Coral coral:
+                                    @RenderCoralEditForm(coral)
+                                    break;
+                                case SaltwaterFish saltwaterFish:
+                                    @RenderSaltwaterFishEditForm(saltwaterFish)
+                                    break;
+                                case FreshwaterFish freshwaterFish:
+                                    @RenderFreshwaterFishEditForm(freshwaterFish)
+                                    break;
+                                case SaltwaterInvertebrate saltwaterInvert:
+                                    @RenderSaltwaterInvertebrateEditForm(saltwaterInvert)
+                                    break;
+                                case FreshwaterInvertebrate freshwaterInvert:
+                                    @RenderFreshwaterInvertebrateEditForm(freshwaterInvert)
+                                    break;
+                                case Plant plant:
+                                    @RenderPlantEditForm(plant)
+                                    break;
+                            }
+
+                            <div class="d-flex gap-2 mt-4">
+                                <button type="submit" class="btn btn-warning btn-lg">
+                                    <i class="bi bi-check-circle me-2"></i>Update Livestock
+                                </button>
+                                <a href="/livestock/dashboard/@Id" class="btn btn-secondary btn-lg">
+                                    <i class="bi bi-x-circle me-2"></i>Cancel
+                                </a>
+                            </div>
+                        </EditForm>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Livestock? livestock;
+    private bool isLoading = true;
+    private string? userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId != null)
+            {
+                livestock = await LivestockService.GetLivestockByIdAsync(Id, userId);
+            }
+        }
+        isLoading = false;
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (userId == null || livestock == null) return;
+
+        try
+        {
+            await LivestockService.UpdateLivestockAsync(livestock, userId);
+            Navigation.NavigateTo($"/livestock/dashboard/{Id}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error updating livestock: {ex.Message}");
+        }
+    }
+
+    private string GetLivestockTypeName()
+    {
+        return livestock switch
+        {
+            Coral => "Coral",
+            SaltwaterFish => "Saltwater Fish",
+            FreshwaterFish => "Freshwater Fish",
+            SaltwaterInvertebrate => "Saltwater Invertebrate",
+            FreshwaterInvertebrate => "Freshwater Invertebrate",
+            Plant => "Plant",
+            _ => "Livestock"
+        };
+    }
+
+    // Coral Edit Form
+    private RenderFragment RenderCoralEditForm(Coral coral) => __builder =>
+    {
+        <div class="card mb-3">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Coral Specifications</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Coral Type *</label>
+                        <InputSelect class="form-select" @bind-Value="coral.CoralType">
+                            @foreach (var type in Enum.GetValues<CoralType>())
+                            {
+                                <option value="@type">@type.ToString().Replace("_", " ")</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Coral Family</label>
+                        <InputText class="form-control" @bind-Value="coral.CoralFamily" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Scientific Name</label>
+                        <InputText class="form-control" @bind-Value="coral.ScientificName" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Colony Size (inches)</label>
+                        <InputNumber class="form-control" @bind-Value="coral.ColonySize" />
+                    </div>
+                </div>
+
+                <h6 class="mt-3 mb-3">Physical Characteristics</h6>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Coloration</label>
+                        <InputText class="form-control" @bind-Value="coral.Coloration" />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Growth Rate</label>
+                        <InputText class="form-control" @bind-Value="coral.GrowthRate" />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Poly Extension</label>
+                        <InputText class="form-control" @bind-Value="coral.PolyExtension" />
+                    </div>
+                </div>
+
+                <h6 class="mt-3 mb-3">Lighting & Flow Requirements</h6>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Lighting Needs</label>
+                        <select class="form-select" @bind="coral.LightingNeeds">
+                            <option value="">-- Select --</option>
+                            <option value="Low">Low</option>
+                            <option value="Moderate">Moderate</option>
+                            <option value="High">High</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">PAR Range</label>
+                        <InputText class="form-control" @bind-Value="coral.LightIntensityPAR" />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Light Spectrum</label>
+                        <InputText class="form-control" @bind-Value="coral.LightSpectrum" />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Flow Needs</label>
+                        <select class="form-select" @bind="coral.FlowNeeds">
+                            <option value="">-- Select --</option>
+                            <option value="Low">Low</option>
+                            <option value="Moderate">Moderate</option>
+                            <option value="High">High</option>
+                            <option value="Turbulent">Turbulent</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Flow Type</label>
+                        <InputText class="form-control" @bind-Value="coral.FlowType" />
+                    </div>
+                </div>
+
+                <h6 class="mt-3 mb-3">Placement & Aggression</h6>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Placement</label>
+                        <select class="form-select" @bind="coral.Placement">
+                            <option value="">-- Select --</option>
+                            <option value="Bottom">Bottom</option>
+                            <option value="Middle">Middle</option>
+                            <option value="Top">Top</option>
+                            <option value="Sand bed">Sand bed</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Spacing (inches)</label>
+                        <InputNumber class="form-control" @bind-Value="coral.SpacingRequirement" />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Aggression Method</label>
+                        <InputText class="form-control" @bind-Value="coral.AggressionMethod" />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="form-check">
+                            <InputCheckbox class="form-check-input" @bind-Value="coral.IsAggressive" id="isAggressive" />
+                            <label class="form-check-label" for="isAggressive">Is Aggressive</label>
+                        </div>
+                    </div>
+                </div>
+
+                <h6 class="mt-3 mb-3">Water Parameters</h6>
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Temp Min (°F)</label>
+                        <InputNumber class="form-control" @bind-Value="coral.OptimalTemperatureMin" />
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Temp Max (°F)</label>
+                        <InputNumber class="form-control" @bind-Value="coral.OptimalTemperatureMax" />
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Salinity Min</label>
+                        <InputNumber class="form-control" @bind-Value="coral.OptimalSalinityMin" step="0.001" />
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Salinity Max</label>
+                        <InputNumber class="form-control" @bind-Value="coral.OptimalSalinityMax" step="0.001" />
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">pH Range</label>
+                        <InputText class="form-control" @bind-Value="coral.pHRange" />
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Alkalinity (dKH)</label>
+                        <InputText class="form-control" @bind-Value="coral.AlkalinityRange" />
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Calcium (ppm)</label>
+                        <InputText class="form-control" @bind-Value="coral.CalciumRange" />
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Magnesium (ppm)</label>
+                        <InputText class="form-control" @bind-Value="coral.MagnesiumRange" />
+                    </div>
+                </div>
+
+                <h6 class="mt-3 mb-3">Feeding & Care</h6>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Care Level</label>
+                        <select class="form-select" @bind="coral.CareLevel">
+                            <option value="">-- Select --</option>
+                            <option value="Beginner">Beginner</option>
+                            <option value="Intermediate">Intermediate</option>
+                            <option value="Advanced">Advanced</option>
+                            <option value="Expert">Expert</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Food Types</label>
+                        <InputText class="form-control" @bind-Value="coral.FoodTypes" />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Feeding Frequency</label>
+                        <InputText class="form-control" @bind-Value="coral.FeedingFrequency" />
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">Dosing Requirements</label>
+                        <InputText class="form-control" @bind-Value="coral.DosingRequirements" />
+                    </div>
+                </div>
+
+                <h6 class="mt-3 mb-3">Special Characteristics</h6>
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <div class="form-check">
+                            <InputCheckbox class="form-check-input" @bind-Value="coral.RequiresFeeding" id="requiresFeeding" />
+                            <label class="form-check-label" for="requiresFeeding">Requires Feeding</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="form-check">
+                            <InputCheckbox class="form-check-input" @bind-Value="coral.RequiresStableParameters"
+                                id="requiresStable" />
+                            <label class="form-check-label" for="requiresStable">Requires Stable Parameters</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="form-check">
+                            <InputCheckbox class="form-check-input" @bind-Value="coral.RequiresDosing" id="requiresDosing" />
+                            <label class="form-check-label" for="requiresDosing">Requires Dosing</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="form-check">
+                            <InputCheckbox class="form-check-input" @bind-Value="coral.HasZooxanthellae" id="hasZoox" />
+                            <label class="form-check-label" for="hasZoox">Has Zooxanthellae</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="form-check">
+                            <InputCheckbox class="form-check-input" @bind-Value="coral.IsToxic" id="isToxic" />
+                            <label class="form-check-label" for="isToxic">Is Toxic</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="form-check">
+                            <InputCheckbox class="form-check-input" @bind-Value="coral.RequiresAcclimation"
+                                id="requiresAcclim" />
+                            <label class="form-check-label" for="requiresAcclim">Requires Acclimation</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="form-check">
+                            <InputCheckbox class="form-check-input" @bind-Value="coral.CanBeFragged" id="canFrag" />
+                            <label class="form-check-label" for="canFrag">Can Be Fragged</label>
+                        </div>
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">Special Requirements</label>
+                        <InputTextArea class="form-control" @bind-Value="coral.SpecialRequirements" rows="2" />
+                    </div>
+                </div>
+
+                <h6 class="mt-3 mb-3">Propagation</h6>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Fragging Difficulty</label>
+                        <select class="form-select" @bind="coral.FraggingDifficulty">
+                            <option value="">-- Select --</option>
+                            <option value="Easy">Easy</option>
+                            <option value="Moderate">Moderate</option>
+                            <option value="Difficult">Difficult</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Fragging Method</label>
+                        <InputText class="form-control" @bind-Value="coral.FraggingMethod" />
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">Fragging Notes</label>
+                        <InputTextArea class="form-control" @bind-Value="coral.FraggingNotes" rows="2" />
+                    </div>
+                </div>
+
+                <h6 class="mt-3 mb-3">Health</h6>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Common Diseases</label>
+                        <InputText class="form-control" @bind-Value="coral.CommonDiseases" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Stress Signs</label>
+                        <InputText class="form-control" @bind-Value="coral.StressSigns" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    };
+
+    // The rest of the edit forms follow similar patterns to AddLivestock but bind directly to the model
+    // I'll provide the key forms below in abbreviated form
+
+    private RenderFragment RenderSaltwaterFishEditForm(SaltwaterFish fish) => __builder =>
+    {
+        <div class="card mb-3">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Saltwater Fish Specifications</h5>
+            </div>
+            <div class="card-body">
+                <!-- Similar structure to AddLivestock but binding to fish. properties directly -->
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Fish Type</label>
+                        <InputSelect class="form-select" @bind-Value="fish.FishType">
+                            @foreach (var type in Enum.GetValues<SaltwaterFishType>())
+                            {
+                                <option value="@type">@type</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Care Level</label>
+                        <InputText class="form-control" @bind-Value="fish.CareLevel" />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Adult Size (inches)</label>
+                        <InputNumber class="form-control" @bind-Value="fish.AdultSize" />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Coloration</label>
+                        <InputText class="form-control" @bind-Value="fish.Coloration" />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Body Shape</label>
+                        <InputText class="form-control" @bind-Value="fish.BodyShape" />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Temperament</label>
+                        <InputText class="form-control" @bind-Value="fish.Temperament" />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Min Tank Size</label>
+                        <InputNumber class="form-control" @bind-Value="fish.MinTankSize" />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Diet</label>
+                        <InputText class="form-control" @bind-Value="fish.Diet" />
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <div class="form-check">
+                            <InputCheckbox class="form-check-input" @bind-Value="fish.IsReefSafe" id="swIsReefSafe" />
+                            <label class="form-check-label" for="swIsReefSafe">Reef Safe</label>
+                        </div>
+                    </div>
+                </div>
+                <!-- Add all other properties following the same pattern -->
+            </div>
+        </div>
+    };
+
+    private RenderFragment RenderFreshwaterFishEditForm(FreshwaterFish fish) => __builder =>
+    {
+        <div class="card mb-3">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Freshwater Fish Specifications</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Fish Type</label>
+                        <InputSelect class="form-select" @bind-Value="fish.FishType">
+                            @foreach (var type in Enum.GetValues<FreshwaterFishType>())
+                            {
+                                <option value="@type">@type</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Care Level</label>
+                        <InputText class="form-control" @bind-Value="fish.CareLevel" />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Adult Size (inches)</label>
+                        <InputNumber class="form-control" @bind-Value="fish.AdultSize" />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Min Tank Size</label>
+                        <InputNumber class="form-control" @bind-Value="fish.MinTankSize" />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Diet</label>
+                        <InputText class="form-control" @bind-Value="fish.Diet" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    };
+
+    private RenderFragment RenderSaltwaterInvertebrateEditForm(SaltwaterInvertebrate invert) => __builder =>
+    {
+        <div class="card mb-3">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Saltwater Invertebrate Specifications</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Invertebrate Type</label>
+                        <InputSelect class="form-select" @bind-Value="invert.InvertebrateType">
+                            @foreach (var type in Enum.GetValues<InvertebrateType>())
+                            {
+                                <option value="@type">@type.ToString().Replace("_", " ")</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Care Level</label>
+                        <InputText class="form-control" @bind-Value="invert.CareLevel" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Adult Size (inches)</label>
+                        <InputNumber class="form-control" @bind-Value="invert.AdultSize" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Min Tank Size</label>
+                        <InputNumber class="form-control" @bind-Value="invert.MinTankSize" />
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <div class="form-check">
+                            <InputCheckbox class="form-check-input" @bind-Value="invert.IsReefSafe" id="swiIsReefSafe" />
+                            <label class="form-check-label" for="swiIsReefSafe">Reef Safe</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    };
+
+    private RenderFragment RenderFreshwaterInvertebrateEditForm(FreshwaterInvertebrate invert) => __builder =>
+    {
+        <div class="card mb-3">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Freshwater Invertebrate Specifications</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Invertebrate Type</label>
+                        <InputSelect class="form-select" @bind-Value="invert.InvertebrateType">
+                            @foreach (var type in Enum.GetValues<FreshwaterInvertebrateType>())
+                            {
+                                <option value="@type">@type</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Care Level</label>
+                        <InputText class="form-control" @bind-Value="invert.CareLevel" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Adult Size (inches)</label>
+                        <InputNumber class="form-control" @bind-Value="invert.AdultSize" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Min Tank Size</label>
+                        <InputNumber class="form-control" @bind-Value="invert.MinTankSize" />
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <div class="form-check">
+                            <InputCheckbox class="form-check-input" @bind-Value="invert.IsPlantSafe" id="fwiIsPlantSafe" />
+                            <label class="form-check-label" for="fwiIsPlantSafe">Plant Safe</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    };
+
+    private RenderFragment RenderPlantEditForm(Plant plant) => __builder =>
+    {
+        <div class="card mb-3">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Plant Specifications</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Lighting Needs</label>
+                        <select class="form-select" @bind="plant.LightingNeeds">
+                            <option value="">-- Select --</option>
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">CO₂ Needs</label>
+                        <select class="form-select" @bind="plant.Co2Needs">
+                            <option value="">-- Select --</option>
+                            <option value="None">None</option>
+                            <option value="Optional">Optional</option>
+                            <option value="Required">Required</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Growth Rate</label>
+                        <select class="form-select" @bind="plant.GrowthRate">
+                            <option value="">-- Select --</option>
+                            <option value="Slow">Slow</option>
+                            <option value="Medium">Medium</option>
+                            <option value="Fast">Fast</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    };
+}

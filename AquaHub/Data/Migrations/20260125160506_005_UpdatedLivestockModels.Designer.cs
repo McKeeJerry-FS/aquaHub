@@ -3,6 +3,7 @@ using System;
 using AquaHub.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AquaHub.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260125160506_005_UpdatedLivestockModels")]
+    partial class _005_UpdatedLivestockModels
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1109,26 +1112,7 @@ namespace AquaHub.Data.Migrations
                 {
                     b.HasBaseType("AquaHub.Models.Livestock");
 
-                    b.Property<string>("Benefits")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<bool>("CanBePropagated")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("CareLevel")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<string>("Co2Needs")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Coloration")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("CommonIssues")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -1136,102 +1120,17 @@ namespace AquaHub.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("HardnessRange")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<string>("LightingNeeds")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("LightingRequirement")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<double>("MaxHeight")
-                        .HasColumnType("double precision");
-
-                    b.Property<bool>("NitrateAbsorber")
-                        .HasColumnType("boolean");
-
-                    b.Property<double>("OptimalTemperatureMax")
-                        .HasColumnType("double precision");
-
-                    b.Property<double>("OptimalTemperatureMin")
-                        .HasColumnType("double precision");
-
-                    b.Property<bool>("OxygenProducer")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Placement")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("PlantType")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("PropagationMethod")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<bool>("RequiresCO2")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("RequiresFertilization")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("RequiresRootTabs")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("SafeForShrimp")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("SafeForSnails")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("SpecialRequirements")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("SubstrateRequirement")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("pHRange")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.ToTable("Livestock", t =>
                         {
-                            t.Property("CareLevel")
-                                .HasColumnName("Plant_CareLevel");
-
-                            t.Property("Coloration")
-                                .HasColumnName("Plant_Coloration");
-
                             t.Property("GrowthRate")
                                 .HasColumnName("Plant_GrowthRate");
 
-                            t.Property("HardnessRange")
-                                .HasColumnName("Plant_HardnessRange");
-
                             t.Property("LightingNeeds")
                                 .HasColumnName("Plant_LightingNeeds");
-
-                            t.Property("OptimalTemperatureMax")
-                                .HasColumnName("Plant_OptimalTemperatureMax");
-
-                            t.Property("OptimalTemperatureMin")
-                                .HasColumnName("Plant_OptimalTemperatureMin");
-
-                            t.Property("Placement")
-                                .HasColumnName("Plant_Placement");
-
-                            t.Property("SpecialRequirements")
-                                .HasColumnName("Plant_SpecialRequirements");
-
-                            t.Property("pHRange")
-                                .HasColumnName("Plant_pHRange");
                         });
 
                     b.HasDiscriminator().HasValue("Plant");

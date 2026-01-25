@@ -1,0 +1,185 @@
+﻿@page "/livestock/delete/{Id:int}"
+@using AquaHub.Services.Interfaces
+@using AquaHub.Models
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@inject ILivestockService LivestockService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+<PageTitle>Delete Livestock</PageTitle>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card shadow border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h3 class="mb-0">
+                        <i class="bi bi-trash me-2"></i>
+                        Delete Livestock
+                    </h3>
+                </div>
+                <div class="card-body">
+                    @if (isLoading)
+                    {
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-danger" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (livestock == null)
+                    {
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle"></i> Livestock not found.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            <strong>Warning!</strong> This action cannot be undone.
+                        </div>
+
+                        <div class="mb-4">
+                            <h5>Are you sure you want to delete this livestock?</h5>
+                            <hr />
+                            <dl class="row">
+                                <dt class="col-sm-4">Type:</dt>
+                                <dd class="col-sm-8">@GetLivestockTypeName()</dd>
+
+                                <dt class="col-sm-4">Name:</dt>
+                                <dd class="col-sm-8">@livestock.Name</dd>
+
+                                <dt class="col-sm-4">Species:</dt>
+                                <dd class="col-sm-8">@livestock.Species</dd>
+
+                                <dt class="col-sm-4">Tank:</dt>
+                                <dd class="col-sm-8">@livestock.Tank?.Name</dd>
+
+                                <dt class="col-sm-4">Added On:</dt>
+                                <dd class="col-sm-8">@livestock.AddedOn.ToShortDateString()</dd>
+                            </dl>
+
+                            @if (livestock is Coral coral)
+                            {
+                                <div class="mt-3">
+                                    <strong>Coral Details:</strong>
+                                    <ul>
+                                        <li>Type: @coral.CoralType</li>
+                                        @if (!string.IsNullOrEmpty(coral.Placement))
+                                        {
+                                            <li>Placement: @coral.Placement</li>
+                                        }
+                                    </ul>
+                                </div>
+                            }
+                            else if (livestock is FreshwaterFish fish)
+                            {
+                                <div class="mt-3">
+                                    <strong>Fish Details:</strong>
+                                    <ul>
+                                        @if (!string.IsNullOrEmpty(fish.Diet))
+                                        {
+                                            <li>Diet: @fish.Diet</li>
+                                        }
+                                        <li>Min Tank Size: @fish.MinTankSize gallons</li>
+                                    </ul>
+                                </div>
+                            }
+                            else if (livestock is Plant plant)
+                            {
+                                <div class="mt-3">
+                                    <strong>Plant Details:</strong>
+                                    <ul>
+                                        @if (!string.IsNullOrEmpty(plant.GrowthRate))
+                                        {
+                                            <li>Growth Rate: @plant.GrowthRate</li>
+                                        }
+                                        @if (!string.IsNullOrEmpty(plant.LightingNeeds))
+                                        {
+                                            <li>Lighting: @plant.LightingNeeds</li>
+                                        }
+                                    </ul>
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrEmpty(livestock.Notes))
+                            {
+                                <div class="mt-3">
+                                    <strong>Notes:</strong>
+                                    <p class="text-muted">@livestock.Notes</p>
+                                </div>
+                            }
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-danger" @onclick="HandleDelete">
+                                <i class="bi bi-trash me-2"></i>Yes, Delete Livestock
+                            </button>
+                            <a href="/livestock/dashboard/@Id" class="btn btn-secondary">
+                                <i class="bi bi-x-circle me-2"></i>Cancel
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Livestock? livestock;
+    private bool isLoading = true;
+    private string? userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId != null)
+            {
+                livestock = await LivestockService.GetLivestockByIdAsync(Id, userId);
+            }
+        }
+        isLoading = false;
+    }
+
+    private async Task HandleDelete()
+    {
+        if (userId == null || livestock == null) return;
+
+        try
+        {
+            var success = await LivestockService.DeleteLivestockAsync(Id, userId);
+            if (success)
+            {
+                Navigation.NavigateTo($"/tanks/dashboard/{livestock.TankId}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting livestock: {ex.Message}");
+        }
+    }
+
+    private string GetLivestockTypeName()
+    {
+        return livestock switch
+        {
+            Coral => "Coral",
+            FreshwaterFish => "Fish",
+            Plant => "Plant",
+            _ => "Livestock"
+        };
+    }
+}

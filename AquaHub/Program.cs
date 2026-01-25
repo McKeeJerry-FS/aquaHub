@@ -43,6 +43,7 @@ builder.Services.AddIdentityCore<AppUser>(options =>
 
 builder.Services.AddScoped<ITankService, TankService>();
 builder.Services.AddScoped<IEquipmentService, EquipmentService>();
+builder.Services.AddScoped<ILivestockService, LivestockService>();
 builder.Services.AddScoped<IFileUploadService, FileUploadService>();
 builder.Services.AddSingleton<IEmailSender<AppUser>, IdentityNoOpEmailSender>();
 

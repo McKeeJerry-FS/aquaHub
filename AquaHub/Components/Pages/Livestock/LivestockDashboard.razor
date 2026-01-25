@@ -1,0 +1,1847 @@
+﻿@page "/livestock/dashboard/{Id:int}"
+@using AquaHub.Models.Enums
+@using AquaHub.Services.Interfaces
+@using AquaHub.Models
+@using AquaHub.Models.ViewModels
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@inject ILivestockService LivestockService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+<PageTitle>@(viewModel?.Livestock?.Name ?? "Livestock") Dashboard</PageTitle>
+
+@if (isLoading)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="text-muted mt-3">Loading dashboard...</p>
+    </div>
+}
+else if (viewModel?.Livestock == null)
+{
+    <div class="alert alert-danger">
+        <i class="bi bi-exclamation-triangle"></i> Livestock not found.
+    </div>
+}
+else
+{
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="display-4 mb-0">
+                <i class="@GetLivestockIcon(viewModel.Livestock)"></i>
+                @viewModel.Livestock.Name
+            </h1>
+            <div class="d-flex gap-2">
+                <a href="/livestock/edit/@viewModel.Livestock.Id" class="btn btn-warning">
+                    <i class="bi bi-pencil"></i> Edit
+                </a>
+                <a href="/livestock/delete/@viewModel.Livestock.Id" class="btn btn-danger">
+                    <i class="bi bi-trash"></i> Delete
+                </a>
+                <a href="/tanks/dashboard/@viewModel.Tank?.Id" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Tank
+                </a>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-2">Type</h6>
+                        <h4>@GetLivestockTypeName(viewModel.Livestock)</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-2">Days in Tank</h6>
+                        <h4>@viewModel.DaysInTank</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-2">Added On</h6>
+                        <h4>@viewModel.Livestock.AddedOn.ToShortDateString()</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-2">Tank</h6>
+                        <h4><a href="/tanks/dashboard/@viewModel.Tank?.Id">@viewModel.Tank?.Name</a></h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Basic Information -->
+        <div class="card mb-4 shadow">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0"><i class="bi bi-info-circle me-2"></i>Basic Information</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Common Name:</dt>
+                            <dd class="col-sm-8">@viewModel.Livestock.Name</dd>
+
+                            <dt class="col-sm-4">Species:</dt>
+                            <dd class="col-sm-8">@viewModel.Livestock.Species</dd>
+
+                            <dt class="col-sm-4">Type:</dt>
+                            <dd class="col-sm-8">@GetLivestockTypeName(viewModel.Livestock)</dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Added On:</dt>
+                            <dd class="col-sm-8">@viewModel.Livestock.AddedOn.ToLongDateString()</dd>
+
+                            <dt class="col-sm-4">Days in Tank:</dt>
+                            <dd class="col-sm-8">@viewModel.DaysInTank days</dd>
+
+                            @if (!string.IsNullOrEmpty(viewModel.Livestock.Notes))
+                            {
+                                <dt class="col-sm-4">Notes:</dt>
+                                <dd class="col-sm-8">@viewModel.Livestock.Notes</dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Type-Specific Details -->
+        @switch (viewModel.Livestock)
+        {
+            case Coral coral:
+                @RenderCoralDetails(coral)
+                break;
+            case SaltwaterFish saltwaterFish:
+                @RenderSaltwaterFishDetails(saltwaterFish)
+                break;
+            case FreshwaterFish freshwaterFish:
+                @RenderFreshwaterFishDetails(freshwaterFish)
+                break;
+            case SaltwaterInvertebrate saltwaterInvert:
+                @RenderSaltwaterInvertebrateDetails(saltwaterInvert)
+                break;
+            case FreshwaterInvertebrate freshwaterInvert:
+                @RenderFreshwaterInvertebrateDetails(freshwaterInvert)
+                break;
+            case Plant plant:
+                @RenderPlantDetails(plant)
+                break;
+        }
+
+        <!-- Recent Water Tests -->
+        @if (viewModel.RecentWaterTests?.Any() == true)
+        {
+            <div class="card mb-4 shadow">
+                <div class="card-header bg-info text-white">
+                    <h3 class="mb-0"><i class="bi bi-droplet me-2"></i>Recent Water Tests</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>pH</th>
+                                    <th>Ammonia</th>
+                                    <th>Nitrite</th>
+                                    <th>Nitrate</th>
+                                    <th>Temperature</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var test in viewModel.RecentWaterTests)
+                                {
+                                    <tr>
+                                        <td>@test.Timestamp.ToShortDateString()</td>
+                                        <td>@test.PH</td>
+                                        <td>@test.Ammonia</td>
+                                        <td>@test.Nitrite</td>
+                                        <td>@test.Nitrate</td>
+                                        <td>@test.Temperature°F</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private LivestockDashboardViewModel? viewModel;
+    private bool isLoading = true;
+    private string? userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId != null)
+            {
+                viewModel = await LivestockService.GetLivestockDashboardAsync(Id, userId);
+            }
+        }
+        isLoading = false;
+    }
+
+    private string GetLivestockIcon(Livestock livestock)
+    {
+        return livestock switch
+        {
+            Coral => "bi bi-flower1",
+            SaltwaterFish => "bi bi-water",
+            FreshwaterFish => "bi bi-droplet",
+            SaltwaterInvertebrate => "bi bi-bug",
+            FreshwaterInvertebrate => "bi bi-bug-fill",
+            Plant => "bi bi-flower3",
+            _ => "bi bi-question-circle"
+        };
+    }
+
+    private string GetLivestockTypeName(Livestock livestock)
+    {
+        return livestock switch
+        {
+            Coral => "Coral",
+            SaltwaterFish => "Saltwater Fish",
+            FreshwaterFish => "Freshwater Fish",
+            SaltwaterInvertebrate => "Saltwater Invertebrate",
+            FreshwaterInvertebrate => "Freshwater Invertebrate",
+            Plant => "Plant",
+            _ => "Livestock"
+        };
+    }
+
+    // Coral Details
+    private RenderFragment RenderCoralDetails(Coral coral) => __builder =>
+    {
+        <div class="row">
+            <!-- Physical Characteristics -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-success text-white">
+                        <h4 class="mb-0"><i class="bi bi-eye me-2"></i>Physical Characteristics</h4>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-5">Coral Type:</dt>
+                            <dd class="col-sm-7"><span class="badge bg-primary">@coral.CoralType.ToString().Replace("_", " ")</span></dd>
+
+                            @if (!string.IsNullOrEmpty(coral.CoralFamily))
+                            {
+                                <dt class="col-sm-5">Family:</dt>
+                                <dd class="col-sm-7">@coral.CoralFamily</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(coral.ScientificName))
+                            {
+                                <dt class="col-sm-5">Scientific Name:</dt>
+                                <dd class="col-sm-7"><em>@coral.ScientificName</em></dd>
+                            }
+
+                            @if (coral.ColonySize > 0)
+                            {
+                                <dt class="col-sm-5">Colony Size:</dt>
+                                <dd class="col-sm-7">@coral.ColonySize inches</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(coral.Coloration))
+                            {
+                                <dt class="col-sm-5">Coloration:</dt>
+                                <dd class="col-sm-7">@coral.Coloration</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(coral.GrowthRate))
+                            {
+                                <dt class="col-sm-5">Growth Rate:</dt>
+                                <dd class="col-sm-7">@coral.GrowthRate</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(coral.PolyExtension))
+                            {
+                                <dt class="col-sm-5">Poly Extension:</dt>
+                                <dd class="col-sm-7">@coral.PolyExtension</dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lighting & Flow -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-warning text-dark">
+                        <h4 class="mb-0"><i class="bi bi-brightness-high me-2"></i>Lighting & Flow</h4>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            @if (!string.IsNullOrEmpty(coral.LightingNeeds))
+                            {
+                                <dt class="col-sm-5">Lighting Needs:</dt>
+                                <dd class="col-sm-7"><span class="badge bg-info">@coral.LightingNeeds</span></dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(coral.LightIntensityPAR))
+                            {
+                                <dt class="col-sm-5">PAR Range:</dt>
+                                <dd class="col-sm-7">@coral.LightIntensityPAR</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(coral.LightSpectrum))
+                            {
+                                <dt class="col-sm-5">Light Spectrum:</dt>
+                                <dd class="col-sm-7">@coral.LightSpectrum</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(coral.FlowNeeds))
+                            {
+                                <dt class="col-sm-5">Flow Needs:</dt>
+                                <dd class="col-sm-7"><span class="badge bg-info">@coral.FlowNeeds</span></dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(coral.FlowType))
+                            {
+                                <dt class="col-sm-5">Flow Type:</dt>
+                                <dd class="col-sm-7">@coral.FlowType</dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Placement & Aggression -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-danger text-white">
+                        <h4 class="mb-0"><i class="bi bi-geo-alt me-2"></i>Placement & Aggression</h4>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            @if (!string.IsNullOrEmpty(coral.Placement))
+                            {
+                                <dt class="col-sm-5">Placement:</dt>
+                                <dd class="col-sm-7">@coral.Placement</dd>
+                            }
+
+                            @if (coral.SpacingRequirement > 0)
+                            {
+                                <dt class="col-sm-5">Spacing Needed:</dt>
+                                <dd class="col-sm-7">@coral.SpacingRequirement inches</dd>
+                            }
+
+                            <dt class="col-sm-5">Is Aggressive:</dt>
+                            <dd class="col-sm-7">
+                                @if (coral.IsAggressive)
+                                {
+                                    <span class="badge bg-danger">Yes</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success">No</span>
+                                }
+                            </dd>
+
+                            @if (!string.IsNullOrEmpty(coral.AggressionMethod))
+                            {
+                                <dt class="col-sm-5">Aggression Method:</dt>
+                                <dd class="col-sm-7">@coral.AggressionMethod</dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Water Parameters -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-info text-white">
+                        <h4 class="mb-0"><i class="bi bi-droplet me-2"></i>Water Parameters</h4>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            @if (coral.OptimalTemperatureMin > 0 || coral.OptimalTemperatureMax > 0)
+                            {
+                                <dt class="col-sm-5">Temperature:</dt>
+                                <dd class="col-sm-7">@coral.OptimalTemperatureMin°F - @coral.OptimalTemperatureMax°F</dd>
+                            }
+
+                            @if (coral.OptimalSalinityMin > 0 || coral.OptimalSalinityMax > 0)
+                            {
+                                <dt class="col-sm-5">Salinity:</dt>
+                                <dd class="col-sm-7">@coral.OptimalSalinityMin - @coral.OptimalSalinityMax</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(coral.pHRange))
+                            {
+                                <dt class="col-sm-5">pH Range:</dt>
+                                <dd class="col-sm-7">@coral.pHRange</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(coral.AlkalinityRange))
+                            {
+                                <dt class="col-sm-5">Alkalinity:</dt>
+                                <dd class="col-sm-7">@coral.AlkalinityRange dKH</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(coral.CalciumRange))
+                            {
+                                <dt class="col-sm-5">Calcium:</dt>
+                                <dd class="col-sm-7">@coral.CalciumRange ppm</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(coral.MagnesiumRange))
+                            {
+                                <dt class="col-sm-5">Magnesium:</dt>
+                                <dd class="col-sm-7">@coral.MagnesiumRange ppm</dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Care & Feeding -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-secondary text-white">
+                        <h4 class="mb-0"><i class="bi bi-heart-pulse me-2"></i>Care & Feeding</h4>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            @if (!string.IsNullOrEmpty(coral.CareLevel))
+                            {
+                                <dt class="col-sm-5">Care Level:</dt>
+                                <dd class="col-sm-7"><span class="badge bg-@GetCareLevelBadge(coral.CareLevel)">@coral.CareLevel</span></dd>
+                            }
+
+                            <dt class="col-sm-5">Requires Feeding:</dt>
+                            <dd class="col-sm-7">
+                                @if (coral.RequiresFeeding)
+                                {
+                                    <span class="badge bg-warning">Yes</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success">No</span>
+                                }
+                            </dd>
+
+                            @if (!string.IsNullOrEmpty(coral.FoodTypes))
+                            {
+                                <dt class="col-sm-5">Food Types:</dt>
+                                <dd class="col-sm-7">@coral.FoodTypes</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(coral.FeedingFrequency))
+                            {
+                                <dt class="col-sm-5">Feeding Frequency:</dt>
+                                <dd class="col-sm-7">@coral.FeedingFrequency</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(coral.DosingRequirements))
+                            {
+                                <dt class="col-sm-5">Dosing Required:</dt>
+                                <dd class="col-sm-7">@coral.DosingRequirements</dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Special Characteristics -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-dark text-white">
+                        <h4 class="mb-0"><i class="bi bi-star me-2"></i>Special Characteristics</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6 mb-2">
+                                <strong>Stable Parameters:</strong> @(coral.RequiresStableParameters ? "Required" : "Not Critical")
+                            </div>
+                            <div class="col-6 mb-2">
+                                <strong>Dosing:</strong> @(coral.RequiresDosing ? "Required" : "Optional")
+                            </div>
+                            <div class="col-6 mb-2">
+                                <strong>Zooxanthellae:</strong> @(coral.HasZooxanthellae ? "Yes" : "No")
+                            </div>
+                            <div class="col-6 mb-2">
+                                <strong>Toxic:</strong> @(coral.IsToxic ? "Yes" : "No")
+                            </div>
+                            <div class="col-6 mb-2">
+                                <strong>Acclimation:</strong> @(coral.RequiresAcclimation ? "Required" : "Not Required")
+                            </div>
+                            <div class="col-6 mb-2">
+                                <strong>Can Be Fragged:</strong> @(coral.CanBeFragged ? "Yes" : "No")
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(coral.SpecialRequirements))
+                        {
+                            <hr />
+                            <p class="mb-0"><strong>Special Requirements:</strong><br />@coral.SpecialRequirements</p>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Propagation (if applicable) -->
+            @if (coral.CanBeFragged)
+            {
+                <div class="col-lg-6 mb-4">
+                    <div class="card shadow h-100">
+                        <div class="card-header bg-success text-white">
+                            <h4 class="mb-0"><i class="bi bi-scissors me-2"></i>Propagation</h4>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row mb-0">
+                                @if (!string.IsNullOrEmpty(coral.FraggingDifficulty))
+                                {
+                                    <dt class="col-sm-5">Fragging Difficulty:</dt>
+                                    <dd class="col-sm-7">@coral.FraggingDifficulty</dd>
+                                }
+
+                                @if (!string.IsNullOrEmpty(coral.FraggingMethod))
+                                {
+                                    <dt class="col-sm-5">Method:</dt>
+                                    <dd class="col-sm-7">@coral.FraggingMethod</dd>
+                                }
+
+                                @if (!string.IsNullOrEmpty(coral.FraggingNotes))
+                                {
+                                    <dt class="col-sm-5">Notes:</dt>
+                                    <dd class="col-sm-7">@coral.FraggingNotes</dd>
+                                }
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Health -->
+            @if (!string.IsNullOrEmpty(coral.CommonDiseases) || !string.IsNullOrEmpty(coral.StressSigns))
+            {
+                <div class="col-lg-6 mb-4">
+                    <div class="card shadow h-100">
+                        <div class="card-header bg-warning text-dark">
+                            <h4 class="mb-0"><i class="bi bi-heart-pulse me-2"></i>Health Information</h4>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row mb-0">
+                                @if (!string.IsNullOrEmpty(coral.CommonDiseases))
+                                {
+                                    <dt class="col-sm-5">Common Diseases:</dt>
+                                    <dd class="col-sm-7">@coral.CommonDiseases</dd>
+                                }
+
+                                @if (!string.IsNullOrEmpty(coral.StressSigns))
+                                {
+                                    <dt class="col-sm-5">Stress Signs:</dt>
+                                    <dd class="col-sm-7">@coral.StressSigns</dd>
+                                }
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    };
+
+    // I'll provide abbreviated versions of the other detail views - they follow similar patterns
+    // You can expand them following the Coral example
+
+    private RenderFragment RenderSaltwaterFishDetails(SaltwaterFish fish) => __builder =>
+    {
+        <div class="row">
+            <!-- Physical Characteristics -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0"><i class="bi bi-info-circle me-2"></i>Physical Characteristics</h4>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-5">Fish Type:</dt>
+                            <dd class="col-sm-7"><span class="badge bg-primary">@fish.FishType</span></dd>
+
+                            @if (fish.AdultSize > 0)
+                            {
+                                <dt class="col-sm-5">Adult Size:</dt>
+                                <dd class="col-sm-7">@fish.AdultSize inches</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(fish.Coloration))
+                            {
+                                <dt class="col-sm-5">Coloration:</dt>
+                                <dd class="col-sm-7">@fish.Coloration</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(fish.Temperament))
+                            {
+                                <dt class="col-sm-5">Temperament:</dt>
+                                <dd class="col-sm-7"><span class="badge bg-info">@fish.Temperament</span></dd>
+                            }
+
+                            @if (fish.MinTankSize > 0)
+                            {
+                                <dt class="col-sm-5">Min Tank Size:</dt>
+                                <dd class="col-sm-7">@fish.MinTankSize gallons</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(fish.Diet))
+                            {
+                                <dt class="col-sm-5">Diet:</dt>
+                                <dd class="col-sm-7">@fish.Diet</dd>
+                            }
+
+                            <dt class="col-sm-5">Reef Safe:</dt>
+                            <dd class="col-sm-7">
+                                @if (fish.IsReefSafe)
+                                {
+                                    <span class="badge bg-success">Yes</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">No</span>
+                                }
+                            </dd>
+
+                            @if (fish.AverageLifespanYears > 0)
+                            {
+                                <dt class="col-sm-5">Average Lifespan:</dt>
+                                <dd class="col-sm-7">@fish.AverageLifespanYears years</dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Behavior & Temperament -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-warning text-dark">
+                        <h4 class="mb-0"><i class="bi bi-emoji-smile me-2"></i>Behavior & Temperament</h4>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            @if (!string.IsNullOrEmpty(fish.Temperament))
+                            {
+                                <dt class="col-sm-5">Temperament:</dt>
+                                <dd class="col-sm-7"><span class="badge bg-info">@fish.Temperament</span></dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(fish.ActivityLevel))
+                            {
+                                <dt class="col-sm-5">Activity Level:</dt>
+                                <dd class="col-sm-7">@fish.ActivityLevel</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(fish.SwimmingRegion))
+                            {
+                                <dt class="col-sm-5">Swimming Region:</dt>
+                                <dd class="col-sm-7">@fish.SwimmingRegion</dd>
+                            }
+
+                            <dt class="col-sm-5">Schooling:</dt>
+                            <dd class="col-sm-7">
+                                @if (fish.IsSchooling)
+                                {
+                                    <span class="badge bg-info">Yes (@fish.RecommendedSchoolSize minimum)</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">No</span>
+                                }
+                            </dd>
+
+                            @if (!string.IsNullOrEmpty(fish.FeedingBehavior))
+                            {
+                                <dt class="col-sm-5">Feeding Behavior:</dt>
+                                <dd class="col-sm-7">@fish.FeedingBehavior</dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tank Requirements -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-success text-white">
+                        <h4 class="mb-0"><i class="bi bi-box me-2"></i>Tank Requirements</h4>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            @if (fish.MinTankSize > 0)
+                            {
+                                <dt class="col-sm-5">Min Tank Size:</dt>
+                                <dd class="col-sm-7">@fish.MinTankSize gallons</dd>
+                            }
+
+                            <dt class="col-sm-5">Live Rock:</dt>
+                            <dd class="col-sm-7">@(fish.RequiresLiveRock ? "Required" : "Optional")</dd>
+
+                            <dt class="col-sm-5">Hiding Spots:</dt>
+                            <dd class="col-sm-7">@(fish.RequiresHidingSpots ? "Required" : "Optional")</dd>
+
+                            @if (!string.IsNullOrEmpty(fish.CareLevel))
+                            {
+                                <dt class="col-sm-5">Care Level:</dt>
+                                <dd class="col-sm-7"><span class="badge bg-@GetCareLevelBadge(fish.CareLevel)">@fish.CareLevel</span></dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Water Parameters -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-info text-white">
+                        <h4 class="mb-0"><i class="bi bi-droplet me-2"></i>Water Parameters</h4>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            @if (fish.OptimalTemperatureMin > 0 || fish.OptimalTemperatureMax > 0)
+                            {
+                                <dt class="col-sm-5">Temperature:</dt>
+                                <dd class="col-sm-7">@fish.OptimalTemperatureMin°F - @fish.OptimalTemperatureMax°F</dd>
+                            }
+
+                            @if (fish.OptimalSalinityMin > 0 || fish.OptimalSalinityMax > 0)
+                            {
+                                <dt class="col-sm-5">Salinity:</dt>
+                                <dd class="col-sm-7">@fish.OptimalSalinityMin - @fish.OptimalSalinityMax</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(fish.pHRange))
+                            {
+                                <dt class="col-sm-5">pH Range:</dt>
+                                <dd class="col-sm-7">@fish.pHRange</dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diet & Feeding -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-secondary text-white">
+                        <h4 class="mb-0"><i class="bi bi-egg-fried me-2"></i>Diet & Feeding</h4>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            @if (!string.IsNullOrEmpty(fish.Diet))
+                            {
+                                <dt class="col-sm-5">Diet Type:</dt>
+                                <dd class="col-sm-7"><span class="badge bg-info">@fish.Diet</span></dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(fish.FoodTypes))
+                            {
+                                <dt class="col-sm-5">Food Types:</dt>
+                                <dd class="col-sm-7">@fish.FoodTypes</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(fish.FeedingFrequency))
+                            {
+                                <dt class="col-sm-5">Feeding Frequency:</dt>
+                                <dd class="col-sm-7">@fish.FeedingFrequency</dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Compatibility -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-danger text-white">
+                        <h4 class="mb-0"><i class="bi bi-people me-2"></i>Compatibility</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-2">
+                            <div class="col-6">
+                                <strong>Reef Safe:</strong> 
+                                @if (fish.IsReefSafe)
+                                {
+                                    <span class="badge bg-success">Yes</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">No</span>
+                                }
+                            </div>
+                            <div class="col-6">
+                                <strong>Aggressive to Same Species:</strong> @(fish.AggressiveToSameSpecies ? "Yes" : "No")
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6">
+                                <strong>Aggressive to Others:</strong> @(fish.AggressiveToOtherFish ? "Yes" : "No")
+                            </div>
+                            <div class="col-6">
+                                <strong>Nips Corals:</strong> @(fish.NipsAtCorals ? "Yes" : "No")
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6">
+                                <strong>Nips Invertebrates:</strong> @(fish.NipsAtInvertebrates ? "Yes" : "No")
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(fish.TankMateCompatibility))
+                        {
+                            <hr />
+                            <p class="mb-0"><strong>Tank Mate Notes:</strong><br />@fish.TankMateCompatibility</p>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Special Characteristics & Health -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-dark text-white">
+                        <h4 class="mb-0"><i class="bi bi-star me-2"></i>Special Characteristics & Health</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-2">
+                            <div class="col-6">
+                                <strong>Jumper:</strong> @(fish.IsJumper ? "⚠️ Yes - Lid Required" : "No")
+                            </div>
+                            <div class="col-6">
+                                <strong>Venomous:</strong> @(fish.IsVenomous ? "⚠️ Yes" : "No")
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6">
+                                <strong>Quarantine:</strong> @(fish.RequiresQuarantine ? "Recommended" : "Optional")
+                            </div>
+                            <div class="col-6">
+                                <strong>Prone to Ich:</strong> @(fish.ProneToIch ? "Yes" : "No")
+                            </div>
+                        </div>
+
+                        @if (fish.AverageLifespanYears > 0)
+                        {
+                            <div class="row mb-2">
+                                <div class="col-12">
+                                    <strong>Average Lifespan:</strong> @fish.AverageLifespanYears years
+                                </div>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrEmpty(fish.SpecialRequirements))
+                        {
+                            <hr />
+                            <p class="mb-0"><strong>Special Requirements:</strong><br />@fish.SpecialRequirements</p>
+                        }
+
+                        @if (!string.IsNullOrEmpty(fish.CommonDiseases))
+                        {
+                            <hr />
+                            <p class="mb-0"><strong>Common Diseases:</strong><br />@fish.CommonDiseases</p>
+                        }
+
+                        @if (!string.IsNullOrEmpty(fish.BreedingNotes))
+                        {
+                            <hr />
+                            <p class="mb-0"><strong>Breeding Notes:</strong><br />@fish.BreedingNotes</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    };
+
+    // Freshwater Fish Details - COMPLETE
+    private RenderFragment RenderFreshwaterFishDetails(FreshwaterFish fish) => __builder =>
+    {
+        <div class="row">
+            <!-- Physical Characteristics -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0"><i class="bi bi-info-circle me-2"></i>Physical Characteristics</h4>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-5">Fish Type:</dt>
+                            <dd class="col-sm-7"><span class="badge bg-primary">@fish.FishType</span></dd>
+
+                            @if (fish.AdultSize > 0)
+                            {
+                                <dt class="col-sm-5">Adult Size:</dt>
+                                <dd class="col-sm-7">@fish.AdultSize inches</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(fish.Coloration))
+                            {
+                                <dt class="col-sm-5">Coloration:</dt>
+                                <dd class="col-sm-7">@fish.Coloration</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(fish.BodyShape))
+                            {
+                                <dt class="col-sm-5">Body Shape:</dt>
+                                <dd class="col-sm-7">@fish.BodyShape</dd>
+                            }
+
+                            <dt class="col-sm-5">Long Fins:</dt>
+                            <dd class="col-sm-7">@(fish.HasLongFins ? "Yes" : "No")</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Behavior & Temperament -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-warning text-dark">
+                        <h4 class="mb-0"><i class="bi bi-emoji-smile me-2"></i>Behavior & Temperament</h4>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            @if (!string.IsNullOrEmpty(fish.Temperament))
+                            {
+                                <dt class="col-sm-5">Temperament:</dt>
+                                <dd class="col-sm-7"><span class="badge bg-info">@fish.Temperament</span></dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(fish.ActivityLevel))
+                            {
+                                <dt class="col-sm-5">Activity Level:</dt>
+                                <dd class="col-sm-7">@fish.ActivityLevel</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(fish.SwimmingRegion))
+                            {
+                                <dt class="col-sm-5">Swimming Region:</dt>
+                                <dd class="col-sm-7">@fish.SwimmingRegion</dd>
+                            }
+
+                            <dt class="col-sm-5">Schooling:</dt>
+                            <dd class="col-sm-7">
+                                @if (fish.IsSchooling)
+                                {
+                                    <span class="badge bg-info">Yes (@fish.RecommendedSchoolSize minimum)</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">No</span>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-5">Nocturnal:</dt>
+                            <dd class="col-sm-7">@(fish.IsNocturnal ? "Yes" : "No")</dd>
+
+                            <dt class="col-sm-5">Bottom Feeder:</dt>
+                            <dd class="col-sm-7">@(fish.IsBottomFeeder ? "Yes" : "No")</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tank Requirements -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-success text-white">
+                        <h4 class="mb-0"><i class="bi bi-box me-2"></i>Tank Requirements</h4>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            @if (fish.MinTankSize > 0)
+                            {
+                                <dt class="col-sm-5">Min Tank Size:</dt>
+                                <dd class="col-sm-7">@fish.MinTankSize gallons</dd>
+                            }
+
+                            <dt class="col-sm-5">Plants:</dt>
+                            <dd class="col-sm-7">@(fish.RequiresPlants ? "Required" : "Optional")</dd>
+
+                            <dt class="col-sm-5">Hiding Spots:</dt>
+                            <dd class="col-sm-7">@(fish.RequiresHidingSpots ? "Required" : "Optional")</dd>
+
+                            <dt class="col-sm-5">Driftwood:</dt>
+                            <dd class="col-sm-7">@(fish.RequiresDriftwood ? "Required" : "Optional")</dd>
+
+                            <dt class="col-sm-5">Cycled Tank:</dt>
+                            <dd class="col-sm-7">@(fish.RequiresCycledTank ? "Required" : "Optional")</dd>
+
+                            @if (!string.IsNullOrEmpty(fish.PreferredWaterFlow))
+                            {
+                                <dt class="col-sm-5">Water Flow:</dt>
+                                <dd class="col-sm-7">@fish.PreferredWaterFlow</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(fish.CareLevel))
+                            {
+                                <dt class="col-sm-5">Care Level:</dt>
+                                <dd class="col-sm-7"><span class="badge bg-@GetCareLevelBadge(fish.CareLevel)">@fish.CareLevel</span></dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Water Parameters -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-info text-white">
+                        <h4 class="mb-0"><i class="bi bi-droplet me-2"></i>Water Parameters</h4>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            @if (fish.OptimalTemperatureMin > 0 || fish.OptimalTemperatureMax > 0)
+                            {
+                                <dt class="col-sm-5">Temperature:</dt>
+                                <dd class="col-sm-7">@fish.OptimalTemperatureMin°F - @fish.OptimalTemperatureMax°F</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(fish.pHRange))
+                            {
+                                <dt class="col-sm-5">pH Range:</dt>
+                                <dd class="col-sm-7">@fish.pHRange</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(fish.HardnessRange))
+                            {
+                                <dt class="col-sm-5">Hardness (GH/KH):</dt>
+                                <dd class="col-sm-7">@fish.HardnessRange</dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diet & Feeding -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-secondary text-white">
+                        <h4 class="mb-0"><i class="bi bi-egg-fried me-2"></i>Diet & Feeding</h4>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            @if (!string.IsNullOrEmpty(fish.Diet))
+                            {
+                                <dt class="col-sm-5">Diet Type:</dt>
+                                <dd class="col-sm-7"><span class="badge bg-info">@fish.Diet</span></dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(fish.FoodTypes))
+                            {
+                                <dt class="col-sm-5">Food Types:</dt>
+                                <dd class="col-sm-7">@fish.FoodTypes</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(fish.FeedingFrequency))
+                            {
+                                <dt class="col-sm-5">Feeding Frequency:</dt>
+                                <dd class="col-sm-7">@fish.FeedingFrequency</dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Compatibility -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-danger text-white">
+                        <h4 class="mb-0"><i class="bi bi-people me-2"></i>Compatibility</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-2">
+                            <div class="col-6">
+                                <strong>Aggressive to Same:</strong> @(fish.AggressiveToSameSpecies ? "Yes" : "No")
+                            </div>
+                            <div class="col-6">
+                                <strong>Aggressive to Others:</strong> @(fish.AggressiveToOtherFish ? "Yes" : "No")
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6">
+                                <strong>Fin Nipper:</strong> @(fish.NipsAtFins ? "Yes" : "No")
+                            </div>
+                            <div class="col-6">
+                                <strong>Eats Small Fish:</strong> @(fish.EatsSmallFish ? "Yes" : "No")
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6">
+                                <strong>Eats Shrimp:</strong> @(fish.EatsShrimp ? "Yes" : "No")
+                            </div>
+                            <div class="col-6">
+                                <strong>Eats Snails:</strong> @(fish.EatsSnails ? "Yes" : "No")
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(fish.TankMateCompatibility))
+                        {
+                            <hr />
+                            <p class="mb-0"><strong>Tank Mate Notes:</strong><br />@fish.TankMateCompatibility</p>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Special Characteristics & Health -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-dark text-white">
+                        <h4 class="mb-0"><i class="bi bi-star me-2"></i>Special Characteristics & Health</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-2">
+                            <div class="col-6">
+                                <strong>Jumper:</strong> @(fish.IsJumper ? "⚠️ Yes - Lid Required" : "No")
+                            </div>
+                            <div class="col-6">
+                                <strong>Labyrinth Fish:</strong> @(fish.IsLabyrinthFish ? "Yes" : "No")
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6">
+                                <strong>Airstone Needed:</strong> @(fish.RequiresAirstone ? "Yes" : "No")
+                            </div>
+                            <div class="col-6">
+                                <strong>Quarantine:</strong> @(fish.RequiresQuarantine ? "Recommended" : "Optional")
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6">
+                                <strong>Prone to Ich:</strong> @(fish.ProneToIch ? "Yes" : "No")
+                            </div>
+                            <div class="col-6">
+                                <strong>Prone to Dropsy:</strong> @(fish.ProneToDropsy ? "Yes" : "No")
+                            </div>
+                        </div>
+
+                        @if (fish.AverageLifespanYears > 0)
+                        {
+                            <div class="row mb-2">
+                                <div class="col-12">
+                                    <strong>Average Lifespan:</strong> @fish.AverageLifespanYears years
+                                </div>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrEmpty(fish.BreedingType))
+                        {
+                            <div class="row mb-2">
+                                <div class="col-12">
+                                    <strong>Breeding Type:</strong> @fish.BreedingType
+                                </div>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrEmpty(fish.SpecialRequirements))
+                        {
+                            <hr />
+                            <p class="mb-0"><strong>Special Requirements:</strong><br />@fish.SpecialRequirements</p>
+                        }
+
+                        @if (!string.IsNullOrEmpty(fish.CommonDiseases))
+                        {
+                            <hr />
+                            <p class="mb-0"><strong>Common Diseases:</strong><br />@fish.CommonDiseases</p>
+                        }
+
+                        @if (!string.IsNullOrEmpty(fish.BreedingNotes))
+                        {
+                            <hr />
+                            <p class="mb-0"><strong>Breeding Notes:</strong><br />@fish.BreedingNotes</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    };
+
+    // Saltwater Invertebrate Details - COMPLETE
+    private RenderFragment RenderSaltwaterInvertebrateDetails(SaltwaterInvertebrate invert) => __builder =>
+    {
+        <div class="row">
+            <!-- Physical Characteristics -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0"><i class="bi bi-bug me-2"></i>Physical Characteristics</h4>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-5">Type:</dt>
+                            <dd class="col-sm-7"><span class="badge bg-primary">@invert.InvertebrateType.ToString().Replace("_", " ")</span></dd>
+
+                            @if (invert.AdultSize > 0)
+                            {
+                                <dt class="col-sm-5">Adult Size:</dt>
+                                <dd class="col-sm-7">@invert.AdultSize inches</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(invert.Coloration))
+                            {
+                                <dt class="col-sm-5">Coloration:</dt>
+                                <dd class="col-sm-7">@invert.Coloration</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(invert.Habitat))
+                            {
+                                <dt class="col-sm-5">Habitat:</dt>
+                                <dd class="col-sm-7">@invert.Habitat</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(invert.Behavior))
+                            {
+                                <dt class="col-sm-5">Behavior:</dt>
+                                <dd class="col-sm-7">@invert.Behavior</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(invert.Placement))
+                            {
+                                <dt class="col-sm-5">Placement:</dt>
+                                <dd class="col-sm-7">@invert.Placement</dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tank Requirements & Care -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-success text-white">
+                        <h4 class="mb-0"><i class="bi bi-box me-2"></i>Tank Requirements & Care</h4>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            @if (invert.MinTankSize > 0)
+                            {
+                                <dt class="col-sm-5">Min Tank Size:</dt>
+                                <dd class="col-sm-7">@invert.MinTankSize gallons</dd>
+                            }
+
+                            <dt class="col-sm-5">Reef Safe:</dt>
+                            <dd class="col-sm-7">
+                                @if (invert.IsReefSafe)
+                                {
+                                    <span class="badge bg-success">Yes</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">No</span>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-5">Cleaner Species:</dt>
+                            <dd class="col-sm-7">
+                                @if (invert.IsCleaner)
+                                {
+                                    <span class="badge bg-info">Yes</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">No</span>
+                                }
+                            </dd>
+
+                            @if (!string.IsNullOrEmpty(invert.CareLevel))
+                            {
+                                <dt class="col-sm-5">Care Level:</dt>
+                                <dd class="col-sm-7"><span class="badge bg-@GetCareLevelBadge(invert.CareLevel)">@invert.CareLevel</span></dd>
+                            }
+
+                            <dt class="col-sm-5">Requires Acclimation:</dt>
+                            <dd class="col-sm-7">@(invert.RequiresAcclimation ? "Yes - Drip Acclimation" : "Standard")</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Water Parameters -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-info text-white">
+                        <h4 class="mb-0"><i class="bi bi-droplet me-2"></i>Water Parameters</h4>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            @if (invert.OptimalTemperatureMin > 0 || invert.OptimalTemperatureMax > 0)
+                            {
+                                <dt class="col-sm-5">Temperature:</dt>
+                                <dd class="col-sm-7">@invert.OptimalTemperatureMin°F - @invert.OptimalTemperatureMax°F</dd>
+                            }
+
+                            @if (invert.OptimalSalinityMin > 0 || invert.OptimalSalinityMax > 0)
+                            {
+                                <dt class="col-sm-5">Salinity:</dt>
+                                <dd class="col-sm-7">@invert.OptimalSalinityMin - @invert.OptimalSalinityMax</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(invert.pHRange))
+                            {
+                                <dt class="col-sm-5">pH Range:</dt>
+                                <dd class="col-sm-7">@invert.pHRange</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(invert.WaterParameters))
+                            {
+                                <dt class="col-sm-5">Additional Notes:</dt>
+                                <dd class="col-sm-7">@invert.WaterParameters</dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diet & Compatibility -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-warning text-dark">
+                        <h4 class="mb-0"><i class="bi bi-egg-fried me-2"></i>Diet & Compatibility</h4>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            @if (!string.IsNullOrEmpty(invert.Diet))
+                            {
+                                <dt class="col-sm-5">Diet:</dt>
+                                <dd class="col-sm-7">@invert.Diet</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(invert.FeedingFrequency))
+                            {
+                                <dt class="col-sm-5">Feeding Frequency:</dt>
+                                <dd class="col-sm-7">@invert.FeedingFrequency</dd>
+                            }
+
+                            <dt class="col-sm-5">Aggressive to Own Species:</dt>
+                            <dd class="col-sm-7">@(invert.AggressiveTowardsOwnSpecies ? "Yes" : "No")</dd>
+
+                            @if (!string.IsNullOrEmpty(invert.TankMateCompatibility))
+                            {
+                                <dt class="col-sm-5">Tank Mate Notes:</dt>
+                                <dd class="col-sm-7">@invert.TankMateCompatibility</dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Health & Special Notes -->
+            <div class="col-lg-12 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-dark text-white">
+                        <h4 class="mb-0"><i class="bi bi-heart-pulse me-2"></i>Health & Special Information</h4>
+                    </div>
+                    <div class="card-body">
+                        @if (invert.AverageLifespanYears > 0)
+                        {
+                            <p><strong>Average Lifespan:</strong> @invert.AverageLifespanYears years</p>
+                        }
+
+                        @if (!string.IsNullOrEmpty(invert.CommonDiseases))
+                        {
+                            <p class="mb-2"><strong>Common Diseases:</strong><br />@invert.CommonDiseases</p>
+                        }
+
+                        @if (!string.IsNullOrEmpty(invert.SpecialRequirements))
+                        {
+                            <p class="mb-0"><strong>Special Requirements:</strong><br />@invert.SpecialRequirements</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    };
+
+    // Freshwater Invertebrate Details - COMPLETE
+    private RenderFragment RenderFreshwaterInvertebrateDetails(FreshwaterInvertebrate invert) => __builder =>
+    {
+        <div class="row">
+            <!-- Physical Characteristics -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0"><i class="bi bi-bug me-2"></i>Physical Characteristics</h4>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-5">Type:</dt>
+                            <dd class="col-sm-7"><span class="badge bg-primary">@invert.InvertebrateType</span></dd>
+
+                            @if (invert.AdultSize > 0)
+                            {
+                                <dt class="col-sm-5">Adult Size:</dt>
+                                <dd class="col-sm-7">@invert.AdultSize inches</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(invert.Coloration))
+                            {
+                                <dt class="col-sm-5">Coloration:</dt>
+                                <dd class="col-sm-7">@invert.Coloration</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(invert.Habitat))
+                            {
+                                <dt class="col-sm-5">Habitat:</dt>
+                                <dd class="col-sm-7">@invert.Habitat</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(invert.Behavior))
+                            {
+                                <dt class="col-sm-5">Behavior:</dt>
+                                <dd class="col-sm-7">@invert.Behavior</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(invert.Placement))
+                            {
+                                <dt class="col-sm-5">Placement:</dt>
+                                <dd class="col-sm-7">@invert.Placement</dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tank Requirements & Care -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-success text-white">
+                        <h4 class="mb-0"><i class="bi bi-box me-2"></i>Tank Requirements & Care</h4>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            @if (invert.MinTankSize > 0)
+                            {
+                                <dt class="col-sm-5">Min Tank Size:</dt>
+                                <dd class="col-sm-7">@invert.MinTankSize gallons</dd>
+                            }
+
+                            <dt class="col-sm-5">Plant Safe:</dt>
+                            <dd class="col-sm-7">
+                                @if (invert.IsPlantSafe)
+                                {
+                                    <span class="badge bg-success">Yes</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">No</span>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-5">Algae Eater:</dt>
+                            <dd class="col-sm-7">
+                                @if (invert.IsAlgaeEater)
+                                {
+                                    <span class="badge bg-success">Yes</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">No</span>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-5">Scavenger:</dt>
+                            <dd class="col-sm-7">
+                                @if (invert.IsScavenger)
+                                {
+                                    <span class="badge bg-info">Yes</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">No</span>
+                                }
+                            </dd>
+
+                            @if (!string.IsNullOrEmpty(invert.CareLevel))
+                            {
+                                <dt class="col-sm-5">Care Level:</dt>
+                                <dd class="col-sm-7"><span class="badge bg-@GetCareLevelBadge(invert.CareLevel)">@invert.CareLevel</span></dd>
+                            }
+
+                            <dt class="col-sm-5">Requires Acclimation:</dt>
+                            <dd class="col-sm-7">@(invert.RequiresAcclimation ? "Yes - Drip Acclimation" : "Standard")</dd>
+
+                            <dt class="col-sm-5">Copper Sensitive:</dt>
+                            <dd class="col-sm-7">@(invert.SensitiveToCopper ? "⚠️ Yes" : "No")</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Water Parameters -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-info text-white">
+                        <h4 class="mb-0"><i class="bi bi-droplet me-2"></i>Water Parameters</h4>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            @if (invert.OptimalTemperatureMin > 0 || invert.OptimalTemperatureMax > 0)
+                            {
+                                <dt class="col-sm-5">Temperature:</dt>
+                                <dd class="col-sm-7">@invert.OptimalTemperatureMin°F - @invert.OptimalTemperatureMax°F</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(invert.pHRange))
+                            {
+                                <dt class="col-sm-5">pH Range:</dt>
+                                <dd class="col-sm-7">@invert.pHRange</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(invert.HardnessRange))
+                            {
+                                <dt class="col-sm-5">Hardness (GH/KH):</dt>
+                                <dd class="col-sm-7">@invert.HardnessRange</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(invert.WaterParameters))
+                            {
+                                <dt class="col-sm-5">Additional Notes:</dt>
+                                <dd class="col-sm-7">@invert.WaterParameters</dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diet & Compatibility -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-warning text-dark">
+                        <h4 class="mb-0"><i class="bi bi-egg-fried me-2"></i>Diet & Compatibility</h4>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            @if (!string.IsNullOrEmpty(invert.Diet))
+                            {
+                                <dt class="col-sm-5">Diet:</dt>
+                                <dd class="col-sm-7">@invert.Diet</dd>
+                            }
+
+                            @if (!string.IsNullOrEmpty(invert.FeedingFrequency))
+                            {
+                                <dt class="col-sm-5">Feeding Frequency:</dt>
+                                <dd class="col-sm-7">@invert.FeedingFrequency</dd>
+                            }
+
+                            <dt class="col-sm-5">Aggressive to Own Species:</dt>
+                            <dd class="col-sm-7">@(invert.AggressiveTowardsOwnSpecies ? "Yes" : "No")</dd>
+
+                            @if (!string.IsNullOrEmpty(invert.TankMateCompatibility))
+                            {
+                                <dt class="col-sm-5">Tank Mate Notes:</dt>
+                                <dd class="col-sm-7">@invert.TankMateCompatibility</dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Health & Breeding -->
+            <div class="col-lg-12 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-dark text-white">
+                        <h4 class="mb-0"><i class="bi bi-heart-pulse me-2"></i>Health & Breeding</h4>
+                    </div>
+                    <div class="card-body">
+                        @if (invert.AverageLifespanYears > 0)
+                        {
+                            <p><strong>Average Lifespan:</strong> @invert.AverageLifespanYears years</p>
+                        }
+
+                        @if (!string.IsNullOrEmpty(invert.BreedingDifficulty))
+                        {
+                            <p class="mb-2"><strong>Breeding Difficulty:</strong> @invert.BreedingDifficulty</p>
+                        }
+
+                        @if (!string.IsNullOrEmpty(invert.BreedingNotes))
+                        {
+                            <p class="mb-2"><strong>Breeding Notes:</strong><br />@invert.BreedingNotes</p>
+                        }
+
+                        @if (!string.IsNullOrEmpty(invert.CommonDiseases))
+                        {
+                            <p class="mb-2"><strong>Common Diseases:</strong><br />@invert.CommonDiseases</p>
+                        }
+
+                        @if (!string.IsNullOrEmpty(invert.SpecialRequirements))
+                        {
+                            <p class="mb-0"><strong>Special Requirements:</strong><br />@invert.SpecialRequirements</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    };
+
+    // Plant Details - COMPLETE WITH ALL PROPERTIES
+private RenderFragment RenderPlantDetails(Plant plant) => __builder =>
+{
+    <div class="row">
+        <!-- Physical Characteristics -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="bi bi-flower3 me-2"></i>Physical Characteristics</h4>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Plant Type:</dt>
+                        <dd class="col-sm-7"><span class="badge bg-success">@FormatPlantType(plant.PlantType)</span></dd>
+
+                        @if (plant.MaxHeight > 0)
+                        {
+                            <dt class="col-sm-5">Max Height:</dt>
+                            <dd class="col-sm-7">@plant.MaxHeight inches</dd>
+                        }
+
+                        @if (!string.IsNullOrEmpty(plant.GrowthRate))
+                        {
+                            <dt class="col-sm-5">Growth Rate:</dt>
+                            <dd class="col-sm-7">@plant.GrowthRate</dd>
+                        }
+
+                        @if (!string.IsNullOrEmpty(plant.Placement))
+                        {
+                            <dt class="col-sm-5">Placement:</dt>
+                            <dd class="col-sm-7">@plant.Placement</dd>
+                        }
+
+                        @if (!string.IsNullOrEmpty(plant.Coloration))
+                        {
+                            <dt class="col-sm-5">Coloration:</dt>
+                            <dd class="col-sm-7">@plant.Coloration</dd>
+                        }
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lighting & CO2 Requirements -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0"><i class="bi bi-brightness-high me-2"></i>Lighting & CO2</h4>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        @if (!string.IsNullOrEmpty(plant.LightingRequirement))
+                        {
+                            <dt class="col-sm-5">Lighting:</dt>
+                            <dd class="col-sm-7"><span class="badge bg-info">@plant.LightingRequirement</span></dd>
+                        }
+
+                        <dt class="col-sm-5">CO2 Required:</dt>
+                        <dd class="col-sm-7">
+                            @if (plant.RequiresCO2)
+                            {
+                                <span class="badge bg-warning">Yes</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success">No</span>
+                            }
+                        </dd>
+
+                        @if (!string.IsNullOrEmpty(plant.CareLevel))
+                        {
+                            <dt class="col-sm-5">Care Level:</dt>
+                            <dd class="col-sm-7"><span class="badge bg-@GetCareLevelBadge(plant.CareLevel)">@plant.CareLevel</span></dd>
+                        }
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Water Parameters -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0"><i class="bi bi-droplet me-2"></i>Water Parameters</h4>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        @if (plant.OptimalTemperatureMin > 0 || plant.OptimalTemperatureMax > 0)
+                        {
+                            <dt class="col-sm-5">Temperature:</dt>
+                            <dd class="col-sm-7">@plant.OptimalTemperatureMin°F - @plant.OptimalTemperatureMax°F</dd>
+                        }
+
+                        @if (!string.IsNullOrEmpty(plant.pHRange))
+                        {
+                            <dt class="col-sm-5">pH Range:</dt>
+                            <dd class="col-sm-7">@plant.pHRange</dd>
+                        }
+
+                        @if (!string.IsNullOrEmpty(plant.HardnessRange))
+                        {
+                            <dt class="col-sm-5">Hardness (GH/KH):</dt>
+                            <dd class="col-sm-7">@plant.HardnessRange</dd>
+                        }
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Substrate & Fertilization -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header bg-secondary text-white">
+                    <h4 class="mb-0"><i class="bi bi-layers me-2"></i>Substrate & Fertilization</h4>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        @if (!string.IsNullOrEmpty(plant.SubstrateRequirement))
+                        {
+                            <dt class="col-sm-5">Substrate:</dt>
+                            <dd class="col-sm-7">@plant.SubstrateRequirement</dd>
+                        }
+
+                        <dt class="col-sm-5">Root Tabs:</dt>
+                        <dd class="col-sm-7">@(plant.RequiresRootTabs ? "Required" : "Optional")</dd>
+
+                        <dt class="col-sm-5">Fertilization:</dt>
+                        <dd class="col-sm-7">@(plant.RequiresFertilization ? "Required" : "Optional")</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tank Compatibility & Benefits -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="bi bi-check2-circle me-2"></i>Tank Compatibility & Benefits</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-2">
+                        <div class="col-6">
+                            <strong>Safe for Shrimp:</strong> @(plant.SafeForShrimp ? "✓ Yes" : "No")
+                        </div>
+                        <div class="col-6">
+                            <strong>Safe for Snails:</strong> @(plant.SafeForSnails ? "✓ Yes" : "No")
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-6">
+                            <strong>Oxygen Producer:</strong> @(plant.OxygenProducer ? "✓ Yes" : "No")
+                        </div>
+                        <div class="col-6">
+                            <strong>Nitrate Absorber:</strong> @(plant.NitrateAbsorber ? "✓ Yes" : "No")
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(plant.Benefits))
+                    {
+                        <hr />
+                        <p class="mb-0"><strong>Benefits:</strong><br />@plant.Benefits</p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Propagation -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="bi bi-scissors me-2"></i>Propagation</h4>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Can Be Propagated:</dt>
+                        <dd class="col-sm-7">
+                            @if (plant.CanBePropagated)
+                            {
+                                <span class="badge bg-success">Yes</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">No</span>
+                            }
+                        </dd>
+
+                        @if (!string.IsNullOrEmpty(plant.PropagationMethod))
+                        {
+                            <dt class="col-sm-5">Method:</dt>
+                            <dd class="col-sm-7">@plant.PropagationMethod</dd>
+                        }
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Special Requirements & Common Issues -->
+        @if (!string.IsNullOrEmpty(plant.SpecialRequirements) || !string.IsNullOrEmpty(plant.CommonIssues))
+        {
+            <div class="col-lg-12 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-dark text-white">
+                        <h4 class="mb-0"><i class="bi bi-star me-2"></i>Special Information</h4>
+                    </div>
+                    <div class="card-body">
+                        @if (!string.IsNullOrEmpty(plant.SpecialRequirements))
+                        {
+                            <p class="mb-2"><strong>Special Requirements:</strong><br />@plant.SpecialRequirements</p>
+                        }
+
+                        @if (!string.IsNullOrEmpty(plant.CommonIssues))
+                        {
+                            @if (!string.IsNullOrEmpty(plant.SpecialRequirements))
+                            {
+                                <hr />
+                            }
+                            <p class="mb-0"><strong>Common Issues:</strong><br />@plant.CommonIssues</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+};
+    private string GetCareLevelBadge(string careLevel)
+    {
+        return careLevel?.ToLower() switch
+        {
+            "easy" => "success",
+            "moderate" => "warning",
+            "difficult" => "danger",
+            "expert" => "dark",
+            _ => "secondary"
+        };
+    }
+
+    private string FormatPlantType(PlantType plantType)
+    {
+        return plantType.ToString().Replace("_", " ");
+    }
+}

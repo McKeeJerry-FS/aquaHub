@@ -18,6 +18,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<MaintenanceLog> MaintenanceLogs { get; set; }
     public DbSet<DosingRecord> DosingRecords { get; set; }
     public DbSet<PhotoLog> PhotoLogs { get; set; }
+    public DbSet<FreshwaterFish> FreshwaterFish { get; set; }
+    public DbSet<SaltwaterInvertebrate> SaltwaterInvertebrates { get; set; }
+    public DbSet<SaltwaterFish> SaltwaterFish { get; set; }
+    public DbSet<FreshwaterInvertebrate> FreshwaterInvertebrates { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
