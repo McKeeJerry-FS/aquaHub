@@ -4,6 +4,9 @@
 @using AquaHub.Models.Enums
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Components
 @inject IWaterTestService WaterTestService
 @inject ITankService TankService
 @inject NavigationManager Navigation
@@ -64,7 +67,8 @@
                                 <div class="alert alert-danger alert-dismissible fade show" role="alert">
                                     <i class="bi bi-exclamation-triangle-fill me-2"></i>
                                     @errorMessage
-                                    <button type="button" class="btn-close" @onclick="@(() => errorMessage = string.Empty)"></button>
+                                    <button type="button" class="btn-close"
+                                        @onclick="@(() => errorMessage = string.Empty)"></button>
                                 </div>
                             }
 
@@ -73,7 +77,8 @@
                                 <div class="alert alert-success alert-dismissible fade show" role="alert">
                                     <i class="bi bi-check-circle-fill me-2"></i>
                                     @successMessage
-                                    <button type="button" class="btn-close" @onclick="@(() => successMessage = string.Empty)"></button>
+                                    <button type="button" class="btn-close"
+                                        @onclick="@(() => successMessage = string.Empty)"></button>
                                 </div>
                             }
 
@@ -93,10 +98,8 @@
                                                 <i class="bi bi-thermometer-half text-danger me-1"></i>
                                                 Temperature (°F)
                                             </label>
-                                            <InputNumber @bind-Value="waterTest.Temperature" 
-                                                class="form-control form-control-lg" 
-                                                placeholder="e.g., 78.5"
-                                                step="0.1" />
+                                            <InputNumber @bind-Value="waterTest.Temperature"
+                                                class="form-control form-control-lg" placeholder="e.g., 78.5" step="0.1" />
                                             <div class="form-text">
                                                 <i class="bi bi-info-circle me-1"></i>
                                                 Typical range: 72-82°F
@@ -108,10 +111,8 @@
                                                 <i class="bi bi-droplet text-info me-1"></i>
                                                 pH Level
                                             </label>
-                                            <InputNumber @bind-Value="waterTest.PH" 
-                                                class="form-control form-control-lg" 
-                                                placeholder="e.g., 7.2"
-                                                step="0.1" />
+                                            <InputNumber @bind-Value="waterTest.PH" class="form-control form-control-lg"
+                                                placeholder="e.g., 7.2" step="0.1" />
                                             <div class="form-text">
                                                 <i class="bi bi-info-circle me-1"></i>
                                                 Freshwater: 6.5-8.0, Saltwater: 8.0-8.4
@@ -123,10 +124,8 @@
                                                 <i class="bi bi-exclamation-triangle text-warning me-1"></i>
                                                 Ammonia (ppm)
                                             </label>
-                                            <InputNumber @bind-Value="waterTest.Ammonia" 
-                                                class="form-control form-control-lg" 
-                                                placeholder="e.g., 0.0"
-                                                step="0.01" />
+                                            <InputNumber @bind-Value="waterTest.Ammonia"
+                                                class="form-control form-control-lg" placeholder="e.g., 0.0" step="0.01" />
                                             <div class="form-text">Should be 0 ppm</div>
                                         </div>
 
@@ -135,10 +134,8 @@
                                                 <i class="bi bi-exclamation-triangle text-warning me-1"></i>
                                                 Nitrite (ppm)
                                             </label>
-                                            <InputNumber @bind-Value="waterTest.Nitrite" 
-                                                class="form-control form-control-lg" 
-                                                placeholder="e.g., 0.0"
-                                                step="0.01" />
+                                            <InputNumber @bind-Value="waterTest.Nitrite"
+                                                class="form-control form-control-lg" placeholder="e.g., 0.0" step="0.01" />
                                             <div class="form-text">Should be 0 ppm</div>
                                         </div>
 
@@ -147,10 +144,8 @@
                                                 <i class="bi bi-check-circle text-success me-1"></i>
                                                 Nitrate (ppm)
                                             </label>
-                                            <InputNumber @bind-Value="waterTest.Nitrate" 
-                                                class="form-control form-control-lg" 
-                                                placeholder="e.g., 10"
-                                                step="1" />
+                                            <InputNumber @bind-Value="waterTest.Nitrate"
+                                                class="form-control form-control-lg" placeholder="e.g., 10" step="1" />
                                             <div class="form-text">Below 20 ppm recommended</div>
                                         </div>
                                     </div>
@@ -158,7 +153,8 @@
                             </div>
 
                             <!-- Freshwater/Planted Parameters Section -->
-                            @if (tank.Type == AquariumType.Freshwater || tank.Type == AquariumType.Planted || tank.Type == AquariumType.Brackish)
+                            @if (tank.Type == AquariumType.Freshwater || tank.Type == AquariumType.Planted || tank.Type ==
+                                                    AquariumType.Brackish)
                             {
                                 <div class="card border-0 shadow-sm mb-4" style="border-left: 4px solid #66bb6a !important;">
                                     <div class="card-header bg-light border-0 py-3">
@@ -175,10 +171,8 @@
                                                     <i class="bi bi-droplet text-primary me-1"></i>
                                                     GH (General Hardness)
                                                 </label>
-                                                <InputNumber @bind-Value="waterTest.GH" 
-                                                    class="form-control form-control-lg" 
-                                                    placeholder="e.g., 8"
-                                                    step="0.5" />
+                                                <InputNumber @bind-Value="waterTest.GH" class="form-control form-control-lg"
+                                                    placeholder="e.g., 8" step="0.5" />
                                                 <div class="form-text">In degrees (°dH)</div>
                                             </div>
 
@@ -187,10 +181,8 @@
                                                     <i class="bi bi-droplet text-primary me-1"></i>
                                                     KH (Carbonate Hardness)
                                                 </label>
-                                                <InputNumber @bind-Value="waterTest.KH" 
-                                                    class="form-control form-control-lg" 
-                                                    placeholder="e.g., 4"
-                                                    step="0.5" />
+                                                <InputNumber @bind-Value="waterTest.KH" class="form-control form-control-lg"
+                                                    placeholder="e.g., 4" step="0.5" />
                                                 <div class="form-text">In degrees (°dH)</div>
                                             </div>
 
@@ -199,10 +191,8 @@
                                                     <i class="bi bi-speedometer text-info me-1"></i>
                                                     TDS (Total Dissolved Solids)
                                                 </label>
-                                                <InputNumber @bind-Value="waterTest.TDS" 
-                                                    class="form-control form-control-lg" 
-                                                    placeholder="e.g., 250"
-                                                    step="10" />
+                                                <InputNumber @bind-Value="waterTest.TDS" class="form-control form-control-lg"
+                                                    placeholder="e.g., 250" step="10" />
                                                 <div class="form-text">In parts per million (ppm)</div>
                                             </div>
                                         </div>
@@ -211,7 +201,8 @@
                             }
 
                             <!-- Saltwater/Reef Parameters Section -->
-                            @if (tank.Type == AquariumType.Saltwater || tank.Type == AquariumType.Reef || tank.Type == AquariumType.Brackish)
+                            @if (tank.Type == AquariumType.Saltwater || tank.Type == AquariumType.Reef || tank.Type ==
+                                                    AquariumType.Brackish)
                             {
                                 <div class="card border-0 shadow-sm mb-4" style="border-left: 4px solid #42a5f5 !important;">
                                     <div class="card-header bg-white border-0 py-3">
@@ -228,10 +219,8 @@
                                                     <i class="bi bi-water text-info me-1"></i>
                                                     Salinity (ppt)
                                                 </label>
-                                                <InputNumber @bind-Value="waterTest.Salinity" 
-                                                    class="form-control form-control-lg" 
-                                                    placeholder="e.g., 35"
-                                                    step="0.5" />
+                                                <InputNumber @bind-Value="waterTest.Salinity"
+                                                    class="form-control form-control-lg" placeholder="e.g., 35" step="0.5" />
                                                 <div class="form-text">
                                                     <i class="bi bi-info-circle me-1"></i>
                                                     Typical: 30-35 ppt (1.020-1.026 SG)
@@ -243,10 +232,8 @@
                                                     <i class="bi bi-gem text-primary me-1"></i>
                                                     Alkalinity (dKH)
                                                 </label>
-                                                <InputNumber @bind-Value="waterTest.Alkalinity" 
-                                                    class="form-control form-control-lg" 
-                                                    placeholder="e.g., 8"
-                                                    step="0.5" />
+                                                <InputNumber @bind-Value="waterTest.Alkalinity"
+                                                    class="form-control form-control-lg" placeholder="e.g., 8" step="0.5" />
                                                 <div class="form-text">
                                                     <i class="bi bi-info-circle me-1"></i>
                                                     Reef: 8-12 dKH
@@ -258,10 +245,8 @@
                                                     <i class="bi bi-shield-check text-success me-1"></i>
                                                     Calcium (ppm)
                                                 </label>
-                                                <InputNumber @bind-Value="waterTest.Calcium" 
-                                                    class="form-control form-control-lg" 
-                                                    placeholder="e.g., 420"
-                                                    step="10" />
+                                                <InputNumber @bind-Value="waterTest.Calcium"
+                                                    class="form-control form-control-lg" placeholder="e.g., 420" step="10" />
                                                 <div class="form-text">Reef: 380-450 ppm</div>
                                             </div>
 
@@ -270,10 +255,8 @@
                                                     <i class="bi bi-lightning text-warning me-1"></i>
                                                     Magnesium (ppm)
                                                 </label>
-                                                <InputNumber @bind-Value="waterTest.Magnesium" 
-                                                    class="form-control form-control-lg" 
-                                                    placeholder="e.g., 1350"
-                                                    step="50" />
+                                                <InputNumber @bind-Value="waterTest.Magnesium"
+                                                    class="form-control form-control-lg" placeholder="e.g., 1350" step="50" />
                                                 <div class="form-text">Reef: 1250-1400 ppm</div>
                                             </div>
 
@@ -282,10 +265,8 @@
                                                     <i class="bi bi-exclamation-circle text-danger me-1"></i>
                                                     Phosphate (ppm)
                                                 </label>
-                                                <InputNumber @bind-Value="waterTest.Phosphate" 
-                                                    class="form-control form-control-lg" 
-                                                    placeholder="e.g., 0.03"
-                                                    step="0.01" />
+                                                <InputNumber @bind-Value="waterTest.Phosphate"
+                                                    class="form-control form-control-lg" placeholder="e.g., 0.03" step="0.01" />
                                                 <div class="form-text">Should be below 0.1 ppm</div>
                                             </div>
                                         </div>
@@ -295,8 +276,8 @@
 
                             <!-- Action Buttons -->
                             <div class="d-flex justify-content-end gap-3 pt-3">
-                                <button type="button" class="btn btn-lg btn-outline-secondary px-4" 
-                                    @onclick="Cancel" disabled="@isSubmitting">
+                                <button type="button" class="btn btn-lg btn-outline-secondary px-4" @onclick="Cancel"
+                                    disabled="@isSubmitting">
                                     <i class="bi bi-x-circle me-2"></i>
                                     Cancel
                                 </button>
@@ -395,9 +376,9 @@
             }
 
             await WaterTestService.CreateWaterTestAsync(waterTest, TankId, userId);
-            
+
             successMessage = "Water test recorded successfully!";
-            
+
             // Redirect after a short delay to show success message
             await Task.Delay(1500);
             Navigation.NavigateTo($"/tanks/dashboard/{TankId}");
@@ -419,18 +400,18 @@
     private bool HasAnyParameterFilled()
     {
         return waterTest.PH.HasValue ||
-               waterTest.Temperature.HasValue ||
-               waterTest.Ammonia.HasValue ||
-               waterTest.Nitrite.HasValue ||
-               waterTest.Nitrate.HasValue ||
-               waterTest.GH.HasValue ||
-               waterTest.KH.HasValue ||
-               waterTest.TDS.HasValue ||
-               waterTest.Salinity.HasValue ||
-               waterTest.Alkalinity.HasValue ||
-               waterTest.Calcium.HasValue ||
-               waterTest.Magnesium.HasValue ||
-               waterTest.Phosphate.HasValue;
+        waterTest.Temperature.HasValue ||
+        waterTest.Ammonia.HasValue ||
+        waterTest.Nitrite.HasValue ||
+        waterTest.Nitrate.HasValue ||
+        waterTest.GH.HasValue ||
+        waterTest.KH.HasValue ||
+        waterTest.TDS.HasValue ||
+        waterTest.Salinity.HasValue ||
+        waterTest.Alkalinity.HasValue ||
+        waterTest.Calcium.HasValue ||
+        waterTest.Magnesium.HasValue ||
+        waterTest.Phosphate.HasValue;
     }
 
     private void Cancel()
