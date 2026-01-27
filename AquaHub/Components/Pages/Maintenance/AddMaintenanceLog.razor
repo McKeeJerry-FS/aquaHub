@@ -1,0 +1,313 @@
+@page "/tanks/{TankId:int}/maintenance/add"
+@using AquaHub.Services.Interfaces
+@using AquaHub.Models
+@using AquaHub.Models.Enums
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@inject IMaintenanceLogService MaintenanceLogService
+@inject ITankService TankService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+<PageTitle>Add Maintenance Record</PageTitle>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-xl-7">
+            <!-- Header Card -->
+            <div class="card shadow-lg border-0 mb-4">
+                <div class="card-header border-0 bg-gradient text-white py-4"
+                    style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-tools fs-1 opacity-75"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h2 class="mb-1 fw-bold">Log Maintenance Activity</h2>
+                            <p class="mb-0 opacity-90">
+                                <i class="bi bi-droplet-fill me-1"></i>
+                                @tank?.Name
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body p-4 p-md-5">
+                    @if (isLoading)
+                    {
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="text-muted">Loading tank information...</p>
+                        </div>
+                    }
+                    else if (tank == null)
+                    {
+                        <div class="alert alert-danger d-flex align-items-center" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+                            <div>
+                                <h5 class="alert-heading mb-1">Tank Not Found</h5>
+                                <p class="mb-0">The requested tank could not be found.</p>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <EditForm Model="maintenanceLog" OnValidSubmit="HandleSubmit">
+                            <DataAnnotationsValidator />
+
+                            @if (!string.IsNullOrEmpty(errorMessage))
+                            {
+                                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                    @errorMessage
+                                    <button type="button" class="btn-close"
+                                        @onclick="@(() => errorMessage = string.Empty)"></button>
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrEmpty(successMessage))
+                            {
+                                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                    <i class="bi bi-check-circle-fill me-2"></i>
+                                    @successMessage
+                                    <button type="button" class="btn-close"
+                                        @onclick="@(() => successMessage = string.Empty)"></button>
+                                </div>
+                            }
+
+                            <!-- Maintenance Type Section -->
+                            <div class="card border-0 shadow-sm mb-4" style="border-left: 4px solid #f093fb !important;">
+                                <div class="card-header bg-white border-0 py-3">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-list-check text-primary fs-4 me-2"></i>
+                                        <h5 class="mb-0 fw-bold">Maintenance Details</h5>
+                                    </div>
+                                </div>
+                                <div class="card-body p-4">
+                                    <div class="mb-4">
+                                        <label class="form-label fw-semibold">
+                                            <i class="bi bi-gear-fill text-primary me-1"></i>
+                                            Maintenance Type *
+                                        </label>
+                                        <InputSelect @bind-Value="maintenanceLog.Type" class="form-select form-select-lg"
+                                            @onchange="OnMaintenanceTypeChanged">
+                                            <option value="">-- Select maintenance type --</option>
+                                            <option value="@MaintenanceType.WaterChange">💧 Water Change</option>
+                                            <option value="@MaintenanceType.FilterCleaning">🔄 Filter Cleaning</option>
+                                            <option value="@MaintenanceType.GlassCleaning">🪟 Glass Cleaning</option>
+                                            <option value="@MaintenanceType.SubstrateVacuum">🧹 Substrate Vacuum</option>
+                                            <option value="@MaintenanceType.EquipmentMaintenance">⚙️ Equipment Maintenance
+                                            </option>
+                                            <option value="@MaintenanceType.TrimPlants">✂️ Trim Plants</option>
+                                            <option value="@MaintenanceType.AlgaeScraping">🧽 Algae Scraping</option>
+                                            <option value="@MaintenanceType.Testing">🧪 Testing</option>
+                                            <option value="@MaintenanceType.Dosing">💉 Dosing</option>
+                                            <option value="@MaintenanceType.Other">📝 Other</option>
+                                        </InputSelect>
+                                        <div class="form-text">
+                                            <i class="bi bi-info-circle me-1"></i>
+                                            Select the type of maintenance performed
+                                        </div>
+                                    </div>
+
+                                    @if (showWaterChangeField)
+                                    {
+                                        <div class="mb-4">
+                                            <label class="form-label fw-semibold">
+                                                <i class="bi bi-percent text-info me-1"></i>
+                                                Water Change Percentage
+                                            </label>
+                                            <div class="input-group input-group-lg">
+                                                <InputNumber @bind-Value="maintenanceLog.WaterChangePercent"
+                                                    class="form-control" placeholder="e.g., 25" step="5" min="0" max="100" />
+                                                <span class="input-group-text">%</span>
+                                            </div>
+                                            <div class="form-text">
+                                                <i class="bi bi-info-circle me-1"></i>
+                                                What percentage of water was changed? (0-100%)
+                                            </div>
+                                        </div>
+                                    }
+
+                                    <div class="mb-0">
+                                        <label class="form-label fw-semibold">
+                                            <i class="bi bi-chat-left-text text-secondary me-1"></i>
+                                            Notes
+                                        </label>
+                                        <InputTextArea @bind-Value="maintenanceLog.Notes"
+                                            class="form-control form-control-lg" rows="5"
+                                            placeholder="Add any additional details about this maintenance activity...&#10;&#10;Examples:&#10;• Products used&#10;• Issues discovered&#10;• Equipment cleaned or replaced&#10;• Observations about tank condition" />
+                                        <div class="form-text">
+                                            <i class="bi bi-info-circle me-1"></i>
+                                            Optional: Add any relevant details, observations, or products used
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="d-flex justify-content-end gap-3 pt-3">
+                                <button type="button" class="btn btn-lg btn-outline-secondary px-4" @onclick="Cancel"
+                                    disabled="@isSubmitting">
+                                    <i class="bi bi-x-circle me-2"></i>
+                                    Cancel
+                                </button>
+                                <button type="submit" class="btn btn-lg btn-primary px-5" disabled="@isSubmitting">
+                                    @if (isSubmitting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                        <span>Saving...</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-save me-2"></i>
+                                        <span>Log Maintenance</span>
+                                    }
+                                </button>
+                            </div>
+                        </EditForm>
+                    }
+                </div>
+            </div>
+
+            <!-- Help Card -->
+            <div class="card border-info shadow-sm">
+                <div class="card-header bg-info bg-opacity-10 border-info">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-lightbulb-fill text-info fs-5 me-2"></i>
+                        <h6 class="mb-0 fw-bold text-info">Maintenance Tips</h6>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0 small">
+                        <li><strong>Water Changes:</strong> Regular water changes (10-25% weekly) help maintain water
+                            quality</li>
+                        <li><strong>Filter Cleaning:</strong> Clean mechanical filter media regularly, but avoid
+                            cleaning biological media too often</li>
+                        <li><strong>Glass Cleaning:</strong> Use an algae scraper or magnetic cleaner to keep viewing
+                            panes clear</li>
+                        <li><strong>Substrate Vacuum:</strong> Remove detritus and waste from gravel during water
+                            changes</li>
+                        <li><strong>Equipment:</strong> Inspect pumps, heaters, and lights regularly for optimal
+                            performance</li>
+                        <li><strong>Documentation:</strong> Keep notes on maintenance to track patterns and schedule
+                            future tasks</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int TankId { get; set; }
+
+    private Tank? tank;
+    private MaintenanceLog maintenanceLog = new();
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private bool showWaterChangeField = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    private string userId = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user?.Identity?.IsAuthenticated == true)
+            {
+                userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    tank = await TankService.GetTankByIdAsync(TankId, userId);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading tank: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void OnMaintenanceTypeChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<MaintenanceType>(e.Value?.ToString(), out var selectedType))
+        {
+            showWaterChangeField = selectedType == MaintenanceType.WaterChange;
+
+            // Clear water change percentage if not a water change
+            if (!showWaterChangeField)
+            {
+                maintenanceLog.WaterChangePercent = null;
+            }
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        try
+        {
+            isSubmitting = true;
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+
+            // Validate maintenance type is selected
+            if (maintenanceLog.Type == 0)
+            {
+                errorMessage = "Please select a maintenance type.";
+                return;
+            }
+
+            // Validate water change percentage if it's a water change
+            if (maintenanceLog.Type == MaintenanceType.WaterChange)
+            {
+                if (!maintenanceLog.WaterChangePercent.HasValue ||
+                maintenanceLog.WaterChangePercent.Value <= 0 ||
+                maintenanceLog.WaterChangePercent.Value > 100)
+                {
+                    errorMessage = "Please enter a valid water change percentage (1-100%).";
+                    return;
+                }
+            }
+
+            await MaintenanceLogService.CreateMaintenanceLogAsync(maintenanceLog, TankId, userId);
+
+            successMessage = "Maintenance activity logged successfully!";
+
+            // Redirect after a short delay to show success message
+            await Task.Delay(1500);
+            Navigation.NavigateTo($"/tanks/dashboard/{TankId}");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            errorMessage = "You don't have permission to add maintenance logs to this tank.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error saving maintenance log: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo($"/tanks/dashboard/{TankId}");
+    }
+}

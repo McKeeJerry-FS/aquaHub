@@ -246,6 +246,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9MaXZlc3RvY2svTGl2ZXN0b2NrSW5kZXgucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
+[/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Pages/Maintenance/AddMaintenanceLog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9NYWludGVuYW5jZS9BZGRNYWludGVuYW5jZUxvZy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
 [/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Pages/NotFound.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9Ob3RGb3VuZC5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 

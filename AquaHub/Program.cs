@@ -45,6 +45,7 @@ builder.Services.AddScoped<ITankService, TankService>();
 builder.Services.AddScoped<IEquipmentService, EquipmentService>();
 builder.Services.AddScoped<ILivestockService, LivestockService>();
 builder.Services.AddScoped<IWaterTestService, WaterTestService>();
+builder.Services.AddScoped<IMaintenanceLogService, MaintenanceLogService>();
 builder.Services.AddScoped<IFileUploadService, FileUploadService>();
 builder.Services.AddSingleton<IEmailSender<AppUser>, IdentityNoOpEmailSender>();
 
