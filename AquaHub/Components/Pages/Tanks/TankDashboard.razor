@@ -39,6 +39,9 @@ else
                 @viewModel.Tank.Name Dashboard
             </h1>
             <div class="d-flex gap-2">
+                <a href="/tanks/@viewModel.Tank?.Id/watertests/add" class="btn btn-info">
+                    <i class="bi bi-droplet-half"></i> Record Water Test
+                </a>
                 <a href="/tanks/@viewModel.Tank?.Id/equipment/add" class="btn btn-success">
                     <i class="bi bi-plus-circle"></i> Add Equipment
                 </a>
