@@ -1,0 +1,635 @@
+﻿@page "/tanks/{TankId:int}/maintenance"
+@using AquaHub.Services.Interfaces
+@using AquaHub.Models
+@using AquaHub.Models.Enums
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+@inject IMaintenanceLogService MaintenanceLogService
+@inject ITankService TankService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JSRuntime
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+<PageTitle>Maintenance Dashboard - @tank?.Name</PageTitle>
+
+<div class="container-fluid py-4">
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-muted">Loading maintenance data...</p>
+        </div>
+    }
+    else if (tank == null)
+    {
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle-fill"></i> Tank not found.
+        </div>
+    }
+    else
+    {
+        <!-- Header -->
+        <div class="card shadow-lg border-0 mb-4">
+            <div class="card-header border-0 bg-gradient text-dark py-4"
+                style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <div
+                    class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                    <div>
+                        <h1 class="mb-1 fw-bold">
+                            <i class="bi bi-tools fs-1"></i>
+                            Maintenance Dashboard
+                        </h1>
+                        <p class="mb-0 opacity-90">
+                            <i class="bi bi-droplet-fill me-1"></i>
+                            @tank.Name
+                        </p>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="/tanks/@TankId/maintenance/add" class="btn btn-light btn-lg">
+                            <i class="bi bi-plus-circle me-2"></i>
+                            Log Maintenance
+                        </a>
+                        <a href="/tanks/dashboard/@TankId" class="btn btn-outline-light btn-lg">
+                            <i class="bi bi-arrow-left me-2"></i>
+                            Back to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                @errorMessage
+                <button type="button" class="btn-close" @onclick="@(() => errorMessage = string.Empty)"></button>
+            </div>
+        }
+
+        @if (!maintenanceLogs.Any())
+        {
+            <!-- Empty State -->
+            <div class="card shadow-sm border-0">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-tools text-muted mb-3" style="font-size: 4rem;"></i>
+                    <h3 class="text-muted mb-3">No Maintenance Records</h3>
+                    <p class="text-muted mb-4">Start tracking your tank maintenance to stay on top of regular care and
+                        scheduling.</p>
+                    <a href="/tanks/@TankId/maintenance/add" class="btn btn-primary btn-lg">
+                        <i class="bi bi-plus-circle me-2"></i>
+                        Log Your First Maintenance
+                    </a>
+                </div>
+            </div>
+        }
+        else
+        {
+            <!-- Stats Cards -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-3 col-sm-6">
+                    <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #f093fb !important;">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="rounded-circle bg-primary bg-opacity-10 p-3">
+                                        <i class="bi bi-clipboard-check text-primary fs-3"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="text-muted mb-1 small">Total Logs</h6>
+                                    <h2 class="mb-0 fw-bold">@maintenanceLogs.Count</h2>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 col-sm-6">
+                    <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #66bb6a !important;">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="rounded-circle bg-success bg-opacity-10 p-3">
+                                        <i class="bi bi-calendar-check text-success fs-3"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="text-muted mb-1 small">Last Maintenance</h6>
+                                    <h6 class="mb-0 fw-bold">@maintenanceLogs.First().Timestamp.ToString("MMM dd")</h6>
+                                    <small class="text-muted">@GetDaysSinceLastMaintenance() days ago</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 col-sm-6">
+                    <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #42a5f5 !important;">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="rounded-circle bg-info bg-opacity-10 p-3">
+                                        <i class="bi bi-droplet text-info fs-3"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="text-muted mb-1 small">Water Changes</h6>
+                                    <h2 class="mb-0 fw-bold">@GetWaterChangeCount()</h2>
+                                    <small class="text-muted">Last: @GetLastWaterChange()</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 col-sm-6">
+                    <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #ffa726 !important;">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="rounded-circle bg-warning bg-opacity-10 p-3">
+                                        <i class="bi bi-graph-up text-warning fs-3"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="text-muted mb-1 small">This Month</h6>
+                                    <h2 class="mb-0 fw-bold">@GetThisMonthCount()</h2>
+                                    <small class="text-muted">activities</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Maintenance Type Breakdown -->
+            <div class="row g-4 mb-4">
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white border-0 py-3">
+                            <h5 class="mb-0 fw-bold">
+                                <i class="bi bi-pie-chart text-primary me-2"></i>
+                                Maintenance Breakdown
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            @foreach (var group in GetMaintenanceTypeGroups())
+                            {
+                                var percentage = (group.Count() * 100.0) / maintenanceLogs.Count;
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="fw-semibold">@GetMaintenanceTypeIcon(group.Key)
+                                            @GetMaintenanceTypeName(group.Key)</span>
+                                        <span class="text-muted">@group.Count() (@percentage.ToString("F0")%)</span>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar @GetMaintenanceTypeColor(group.Key)" role="progressbar"
+                                            style="width: @percentage%" aria-valuenow="@percentage" aria-valuemin="0"
+                                            aria-valuemax="100"></div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white border-0 py-3">
+                            <h5 class="mb-0 fw-bold">
+                                <i class="bi bi-calendar-week text-success me-2"></i>
+                                Recent Activity Timeline
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="timeline">
+                                @foreach (var log in maintenanceLogs.Take(5))
+                                {
+                                    <div class="timeline-item mb-3">
+                                        <div class="d-flex gap-3">
+                                            <div class="flex-shrink-0">
+                                                <div class="rounded-circle bg-light p-2" style="width: 40px; height: 40px;">
+                                                    <i class="@GetMaintenanceTypeIconClass(log.Type) text-primary"></i>
+                                                </div>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex justify-content-between">
+                                                    <strong>@GetMaintenanceTypeName(log.Type)</strong>
+                                                    <small class="text-muted">@log.Timestamp.ToString("MMM dd, h:mm tt")</small>
+                                                </div>
+                                                @if (log.Type == MaintenanceType.WaterChange && log.WaterChangePercent.HasValue)
+                                                {
+                                                    <small class="text-muted d-block">
+                                                        @log.WaterChangePercent.Value% water change
+                                                    </small>
+                                                }
+                                                @if (!string.IsNullOrEmpty(log.Notes))
+                                                {
+                                                    <small class="text-muted d-block">
+                                                        @(log.Notes.Length > 50 ? log.Notes.Substring(0, 50) + "..." : log.Notes)
+                                                    </small>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Maintenance History Table -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold">
+                            <i class="bi bi-table text-primary me-2"></i>
+                            Maintenance History
+                        </h5>
+                        <span class="badge bg-primary rounded-pill">@maintenanceLogs.Count Total</span>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="px-4 py-3">Date & Time</th>
+                                    <th class="py-3">Type</th>
+                                    <th class="py-3">Water Change %</th>
+                                    <th class="py-3">Notes</th>
+                                    <th class="px-4 py-3 text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var log in GetPagedLogs())
+                                {
+                                    <tr class="align-middle">
+                                        <td class="px-4 py-3">
+                                            <div class="d-flex flex-column">
+                                                <span class="fw-semibold">@log.Timestamp.ToString("MMM dd, yyyy")</span>
+                                                <small class="text-muted">@log.Timestamp.ToString("h:mm tt")</small>
+                                            </div>
+                                        </td>
+                                        <td class="py-3">
+                                            <span class="badge @GetMaintenanceTypeColor(log.Type)">
+                                                @GetMaintenanceTypeIcon(log.Type) @GetMaintenanceTypeName(log.Type)
+                                            </span>
+                                        </td>
+                                        <td class="py-3">
+                                            @if (log.WaterChangePercent.HasValue)
+                                            {
+                                                <span class="fw-bold">@log.WaterChangePercent.Value%</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </td>
+                                        <td class="py-3">
+                                            @if (!string.IsNullOrEmpty(log.Notes))
+                                            {
+                                                <span>@(log.Notes.Length > 40 ? log.Notes.Substring(0, 40) + "..." : log.Notes)</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </td>
+                                        <td class="px-4 py-3 text-end">
+                                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ViewDetails(log)">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteLog(log.Id)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Pagination -->
+                @if (totalPages > 1)
+                {
+                    <div class="card-footer bg-white border-0 py-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="text-muted small">
+                                Showing @((currentPage - 1) * pageSize + 1) to @Math.Min(currentPage * pageSize,
+                                                    maintenanceLogs.Count)
+                    of @maintenanceLogs.Count entries
+                </div>
+                <nav aria-label="Maintenance log pagination">
+                    <ul class="pagination mb-0">
+                        <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => ChangePage(currentPage - 1)">
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                        </li>
+                        @for (int i = GetStartPage(); i <= GetEndPage(); i++)
+                                    {
+                                        var pageNumber = i;
+                                        <li class="page-item @(currentPage == pageNumber ? "active" : "")">
+                                            <button class="page-link" @onclick="() => ChangePage(pageNumber)">
+                                                @pageNumber
+                                            </button>
+                                        </li>
+                                    }
+                                    <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                                        <button class="page-link" @onclick="() => ChangePage(currentPage + 1)">
+                                            <i class="bi bi-chevron-right"></i>
+                                        </button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>
+
+<!-- Details Modal -->
+@if (selectedLog != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-gradient text-dark border-0"
+                    style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-clipboard-check me-2"></i>
+                        Maintenance Details
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseDetails"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-2">Date & Time</h6>
+                        <h5 class="fw-bold">@selectedLog.Timestamp.ToString("MMMM dd, yyyy 'at' h:mm tt")</h5>
+                    </div>
+
+                    <div class="card border-0 bg-light mb-3">
+                        <div class="card-body">
+                            <h6 class="text-primary mb-3 fw-bold">
+                                <i class="bi bi-gear-fill me-2"></i>Maintenance Information
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-muted">Type:</span>
+                                        <span class="badge @GetMaintenanceTypeColor(selectedLog.Type) fs-6">
+                                            @GetMaintenanceTypeIcon(selectedLog.Type)
+                                            @GetMaintenanceTypeName(selectedLog.Type)
+                                        </span>
+                                    </div>
+                                </div>
+                                @if (selectedLog.WaterChangePercent.HasValue)
+                                {
+                                    <div class="col-md-6">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="text-muted">Water Change:</span>
+                                            <span class="fw-bold">@selectedLog.WaterChangePercent.Value%</span>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(selectedLog.Notes))
+                    {
+                        <div class="card border-0 bg-light">
+                            <div class="card-body">
+                                <h6 class="text-secondary mb-3 fw-bold">
+                                    <i class="bi bi-chat-left-text me-2"></i>Notes
+                                </h6>
+                                <p class="mb-0" style="white-space: pre-wrap;">@selectedLog.Notes</p>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDetails">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int TankId { get; set; }
+
+    private Tank? tank;
+    private List<MaintenanceLog> maintenanceLogs = new();
+    private MaintenanceLog? selectedLog;
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+    private string userId = string.Empty;
+
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private int totalPages => (int)Math.Ceiling(maintenanceLogs.Count / (double)pageSize);
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user?.Identity?.IsAuthenticated == true)
+            {
+                userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    tank = await TankService.GetTankByIdAsync(TankId, userId);
+                    if (tank != null)
+                    {
+                        maintenanceLogs = await MaintenanceLogService.GetMaintenanceLogsByTankAsync(TankId, userId);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading maintenance data: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private List<MaintenanceLog> GetPagedLogs()
+    {
+        return maintenanceLogs.Skip((currentPage - 1) * pageSize).Take(pageSize).ToList();
+    }
+
+    private void ChangePage(int page)
+    {
+        if (page >= 1 && page <= totalPages)
+        {
+            currentPage = page;
+        }
+    }
+
+    private int GetStartPage()
+    {
+        var start = currentPage - 2;
+        return Math.Max(1, start);
+    }
+
+    private int GetEndPage()
+    {
+        var end = currentPage + 2;
+        return Math.Min(totalPages, end);
+    }
+
+    private int GetDaysSinceLastMaintenance()
+    {
+        if (!maintenanceLogs.Any()) return 0;
+        return (DateTime.UtcNow - maintenanceLogs.First().Timestamp).Days;
+    }
+
+    private int GetWaterChangeCount()
+    {
+        return maintenanceLogs.Count(l => l.Type == MaintenanceType.WaterChange);
+    }
+
+    private string GetLastWaterChange()
+    {
+        var lastWaterChange = maintenanceLogs.FirstOrDefault(l => l.Type == MaintenanceType.WaterChange);
+        if (lastWaterChange == null) return "Never";
+        var days = (DateTime.UtcNow - lastWaterChange.Timestamp).Days;
+        return days == 0 ? "Today" : $"{days}d ago";
+    }
+
+    private int GetThisMonthCount()
+    {
+        var startOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+        return maintenanceLogs.Count(l => l.Timestamp >= startOfMonth);
+    }
+
+    private IEnumerable<IGrouping<MaintenanceType, MaintenanceLog>> GetMaintenanceTypeGroups()
+    {
+        return maintenanceLogs.GroupBy(l => l.Type).OrderByDescending(g => g.Count());
+    }
+
+    private void ViewDetails(MaintenanceLog log)
+    {
+        selectedLog = log;
+    }
+
+    private void CloseDetails()
+    {
+        selectedLog = null;
+    }
+
+    private async Task DeleteLog(int logId)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this maintenance log?"))
+        {
+            try
+            {
+                await MaintenanceLogService.DeleteMaintenanceLogAsync(logId, userId);
+                maintenanceLogs = await MaintenanceLogService.GetMaintenanceLogsByTankAsync(TankId, userId);
+
+                if (currentPage > totalPages && totalPages > 0)
+                {
+                    currentPage = totalPages;
+                }
+
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Error deleting maintenance log: {ex.Message}";
+            }
+        }
+    }
+
+    private string GetMaintenanceTypeName(MaintenanceType type)
+    {
+        return type switch
+        {
+            MaintenanceType.WaterChange => "Water Change",
+            MaintenanceType.FilterCleaning => "Filter Cleaning",
+            MaintenanceType.GlassCleaning => "Glass Cleaning",
+            MaintenanceType.SubstrateVacuum => "Substrate Vacuum",
+            MaintenanceType.EquipmentMaintenance => "Equipment Maintenance",
+            MaintenanceType.TrimPlants => "Trim Plants",
+            MaintenanceType.AlgaeScraping => "Algae Scraping",
+            MaintenanceType.Testing => "Testing",
+            MaintenanceType.Dosing => "Dosing",
+            MaintenanceType.Other => "Other",
+            _ => type.ToString()
+        };
+    }
+
+    private string GetMaintenanceTypeIcon(MaintenanceType type)
+    {
+        return type switch
+        {
+            MaintenanceType.WaterChange => "💧",
+            MaintenanceType.FilterCleaning => "🔄",
+            MaintenanceType.GlassCleaning => "🪟",
+            MaintenanceType.SubstrateVacuum => "🧹",
+            MaintenanceType.EquipmentMaintenance => "⚙️",
+            MaintenanceType.TrimPlants => "✂️",
+            MaintenanceType.AlgaeScraping => "🧽",
+            MaintenanceType.Testing => "🧪",
+            MaintenanceType.Dosing => "💉",
+            MaintenanceType.Other => "📝",
+            _ => "📋"
+        };
+    }
+
+    private string GetMaintenanceTypeIconClass(MaintenanceType type)
+    {
+        return type switch
+        {
+            MaintenanceType.WaterChange => "bi-droplet-fill",
+            MaintenanceType.FilterCleaning => "bi-arrow-repeat",
+            MaintenanceType.GlassCleaning => "bi-window",
+            MaintenanceType.SubstrateVacuum => "bi-brush",
+            MaintenanceType.EquipmentMaintenance => "bi-gear-fill",
+            MaintenanceType.TrimPlants => "bi-scissors",
+            MaintenanceType.AlgaeScraping => "bi-card-checklist",
+            MaintenanceType.Testing => "bi-eyedropper",
+            MaintenanceType.Dosing => "bi-cup-straw",
+            MaintenanceType.Other => "bi-journal-text",
+            _ => "bi-clipboard-check"
+        };
+    }
+
+    private string GetMaintenanceTypeColor(MaintenanceType type)
+    {
+        return type switch
+        {
+            MaintenanceType.WaterChange => "bg-info",
+            MaintenanceType.FilterCleaning => "bg-primary",
+            MaintenanceType.GlassCleaning => "bg-info",
+            MaintenanceType.SubstrateVacuum => "bg-warning",
+            MaintenanceType.EquipmentMaintenance => "bg-danger",
+            MaintenanceType.TrimPlants => "bg-success",
+            MaintenanceType.AlgaeScraping => "bg-warning",
+            MaintenanceType.Testing => "bg-primary",
+            MaintenanceType.Dosing => "bg-success",
+            MaintenanceType.Other => "bg-secondary",
+            _ => "bg-secondary"
+        };
+    }
+}

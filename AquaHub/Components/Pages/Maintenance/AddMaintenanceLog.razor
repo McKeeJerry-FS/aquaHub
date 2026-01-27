@@ -93,8 +93,7 @@
                                             <i class="bi bi-gear-fill text-primary me-1"></i>
                                             Maintenance Type *
                                         </label>
-                                        <InputSelect @bind-Value="maintenanceLog.Type" class="form-select form-select-lg"
-                                            @onchange="OnMaintenanceTypeChanged">
+                                        <InputSelect @bind-Value="maintenanceLog.Type" class="form-select form-select-lg">
                                             <option value="">-- Select maintenance type --</option>
                                             <option value="@MaintenanceType.WaterChange">💧 Water Change</option>
                                             <option value="@MaintenanceType.FilterCleaning">🔄 Filter Cleaning</option>
@@ -114,7 +113,7 @@
                                         </div>
                                     </div>
 
-                                    @if (showWaterChangeField)
+                                    @if (maintenanceLog.Type == MaintenanceType.WaterChange)
                                     {
                                         <div class="mb-4">
                                             <label class="form-label fw-semibold">
@@ -211,7 +210,6 @@
     private MaintenanceLog maintenanceLog = new();
     private bool isLoading = true;
     private bool isSubmitting = false;
-    private bool showWaterChangeField = false;
     private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
     private string userId = string.Empty;
@@ -240,20 +238,6 @@
         finally
         {
             isLoading = false;
-        }
-    }
-
-    private void OnMaintenanceTypeChanged(ChangeEventArgs e)
-    {
-        if (Enum.TryParse<MaintenanceType>(e.Value?.ToString(), out var selectedType))
-        {
-            showWaterChangeField = selectedType == MaintenanceType.WaterChange;
-
-            // Clear water change percentage if not a water change
-            if (!showWaterChangeField)
-            {
-                maintenanceLog.WaterChangePercent = null;
-            }
         }
     }
 
