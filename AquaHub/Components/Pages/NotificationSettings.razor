@@ -1,0 +1,193 @@
+@page "/notification-settings"
+@using AquaHub.Models
+@using AquaHub.Services.Interfaces
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@inject INotificationService NotificationService
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+<PageTitle>Notification Settings - AquaHub</PageTitle>
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Notification Settings</h1>
+        <a href="/notifications" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Notifications
+        </a>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (settings != null)
+    {
+        <div class="card">
+            <div class="card-body">
+                <EditForm Model="@settings" OnValidSubmit="SaveSettings">
+                    <DataAnnotationsValidator />
+
+                    <h5 class="mb-3">Email Notifications</h5>
+
+                    <div class="mb-3 form-check">
+                        <InputCheckbox @bind-Value="settings.EmailNotificationsEnabled" class="form-check-input"
+                            id="emailEnabled" />
+                        <label class="form-check-label" for="emailEnabled">
+                            <strong>Enable email notifications</strong>
+                            <div class="text-muted small">Receive notifications via email</div>
+                        </label>
+                    </div>
+
+                    @if (settings.EmailNotificationsEnabled)
+                    {
+                        <div class="ms-4 mb-4">
+                            <div class="mb-3">
+                                <label class="form-label">Email Delivery Mode</label>
+                                <InputSelect @bind-Value="settings.EmailDigestFrequencyHours" class="form-select">
+                                    <option value="0">Instant (send emails immediately)</option>
+                                    <option value="24">Daily Digest (once per day)</option>
+                                    <option value="168">Weekly Digest (once per week)</option>
+                                </InputSelect>
+                                <div class="form-text">
+                                    Choose how often you want to receive email notifications
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <hr />
+
+                    <h5 class="mb-3">Notification Types</h5>
+
+                    <div class="mb-3 form-check">
+                        <InputCheckbox @bind-Value="settings.ReminderNotificationsEnabled" class="form-check-input"
+                            id="reminderEnabled" />
+                        <label class="form-check-label" for="reminderEnabled">
+                            <strong>Reminder Notifications</strong>
+                            <div class="text-muted small">Get notified about upcoming maintenance, feeding, and other tasks
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="mb-3 form-check">
+                        <InputCheckbox @bind-Value="settings.WaterParameterAlertsEnabled" class="form-check-input"
+                            id="waterAlertEnabled" />
+                        <label class="form-check-label" for="waterAlertEnabled">
+                            <strong>Water Parameter Alerts</strong>
+                            <div class="text-muted small">Get alerts when water test parameters are out of optimal range
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="mb-3 form-check">
+                        <InputCheckbox @bind-Value="settings.EquipmentAlertsEnabled" class="form-check-input"
+                            id="equipmentAlertEnabled" />
+                        <label class="form-check-label" for="equipmentAlertEnabled">
+                            <strong>Equipment Alerts</strong>
+                            <div class="text-muted small">Get notified about equipment maintenance and issues</div>
+                        </label>
+                    </div>
+
+                    <hr />
+
+                    @if (saveMessage != null)
+                    {
+                        <div class="alert @(saveSuccess ? "alert-success" : "alert-danger") alert-dismissible fade show"
+                            role="alert">
+                            @saveMessage
+                            <button type="button" class="btn-close" @onclick="() => saveMessage = null"></button>
+                        </div>
+                    }
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Save Settings
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5 class="mb-3">About Notifications</h5>
+                <ul class="mb-0">
+                    <li class="mb-2">
+                        <strong>Reminder Notifications:</strong> You'll receive notifications based on the reminder schedule
+                        you set.
+                        The notification will be sent the specified number of hours before the task is due.
+                    </li>
+                    <li class="mb-2">
+                        <strong>Water Parameter Alerts:</strong> When you log water test results, the system will check if
+                        any
+                        parameters are outside their optimal ranges and send you an alert if needed.
+                    </li>
+                    <li class="mb-2">
+                        <strong>Email Digests:</strong> If you choose a digest mode, notifications will be batched and sent
+                        at the selected frequency instead of immediately.
+                    </li>
+                    <li>
+                        <strong>In-App Notifications:</strong> Regardless of your email settings, you'll always receive
+                        in-app notifications that you can view on the Notifications page.
+                    </li>
+                </ul>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthState { get; set; }
+
+    private bool isLoading = true;
+    private UserNotificationSettings? settings;
+    private string? saveMessage;
+    private bool saveSuccess;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthState == null) return;
+
+        var authState = await AuthState;
+        var user = authState.User;
+
+        if (!user.Identity?.IsAuthenticated ?? true) return;
+
+        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId)) return;
+
+        settings = await NotificationService.GetUserSettingsAsync(userId);
+
+        isLoading = false;
+    }
+
+    private async Task SaveSettings()
+    {
+        if (settings == null) return;
+
+        try
+        {
+            await NotificationService.UpdateUserSettingsAsync(settings);
+            saveMessage = "Settings saved successfully!";
+            saveSuccess = true;
+        }
+        catch (Exception ex)
+        {
+            saveMessage = $"Error saving settings: {ex.Message}";
+            saveSuccess = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/notifications");
+    }
+}

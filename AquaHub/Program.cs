@@ -50,6 +50,10 @@ builder.Services.AddScoped<ILivestockService, LivestockService>();
 builder.Services.AddScoped<IWaterTestService, WaterTestService>();
 builder.Services.AddScoped<IMaintenanceLogService, MaintenanceLogService>();
 builder.Services.AddScoped<IFileUploadService, FileUploadService>();
+builder.Services.AddScoped<IReminderService, ReminderService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IEmailNotificationService, EmailNotificationService>();
+builder.Services.AddHostedService<ReminderBackgroundService>();
 builder.Services.AddSingleton<IEmailSender<AppUser>, IdentityNoOpEmailSender>();
 
 var app = builder.Build();

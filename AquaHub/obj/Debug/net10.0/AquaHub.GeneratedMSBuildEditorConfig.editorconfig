@@ -194,6 +194,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9BcHAucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
+[/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Layout/NotificationBell.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9MYXlvdXQvTm90aWZpY2F0aW9uQmVsbC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
 [/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Pages/Auth.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9BdXRoLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
@@ -256,6 +260,18 @@ build_metadata.AdditionalFiles.CssScope =
 
 [/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Pages/NotFound.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9Ob3RGb3VuZC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Pages/Notifications.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9Ob3RpZmljYXRpb25zLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Pages/NotificationSettings.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9Ob3RpZmljYXRpb25TZXR0aW5ncy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Pages/Reminders.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9SZW1pbmRlcnMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
 [/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Pages/Tanks/AddTank.razor]

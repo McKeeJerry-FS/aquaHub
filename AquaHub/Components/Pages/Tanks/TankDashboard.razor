@@ -93,6 +93,98 @@ else
             </div>
         }
 
+        <!-- Upcoming Reminders and Recent Notifications -->
+        @if (viewModel.UpcomingReminders.Any() || viewModel.RecentNotifications.Any())
+        {
+            <div class="row mb-4 g-3">
+                <!-- Upcoming Reminders -->
+                @if (viewModel.UpcomingReminders.Any())
+                {
+                    <div class="col-lg-6">
+                        <div class="card shadow h-100">
+                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-alarm"></i> Upcoming Reminders
+                                </h5>
+                                <a href="/reminders" class="btn btn-sm btn-light">View All</a>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="list-group list-group-flush">
+                                    @foreach (var reminder in viewModel.UpcomingReminders)
+                                    {
+                                        <div
+                                            class="list-group-item @(reminder.NextDueDate < DateTime.UtcNow ? "border-start border-danger border-3" : "")">
+                                            <div class="d-flex w-100 justify-content-between align-items-start">
+                                                <div>
+                                                    <h6 class="mb-1">
+                                                        @reminder.Title
+                                                        @if (reminder.NextDueDate < DateTime.UtcNow)
+                                                        {
+                                                            <span class="badge bg-danger">Overdue</span>
+                                                        }
+                                                    </h6>
+                                                    <p class="mb-1 small text-muted">@reminder.Description</p>
+                                                    <small class="text-muted">
+                                                        <i class="bi bi-calendar-event"></i>
+                                                        Due: @reminder.NextDueDate.ToLocalTime().ToString("MMM dd, yyyy 'at' h:mm tt")
+                                                    </small>
+                                                </div>
+                                                <span class="badge bg-info">@reminder.Type</span>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <!-- Recent Notifications -->
+                @if (viewModel.RecentNotifications.Any())
+                {
+                    <div class="col-lg-6">
+                        <div class="card shadow h-100">
+                            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-bell"></i> Recent Notifications
+                                    @if (viewModel.UnreadNotificationCount > 0)
+                                    {
+                                        <span class="badge bg-danger ms-2">@viewModel.UnreadNotificationCount</span>
+                                    }
+                                </h5>
+                                <a href="/notifications" class="btn btn-sm btn-light">View All</a>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="list-group list-group-flush">
+                                    @foreach (var notification in viewModel.RecentNotifications)
+                                    {
+                                        <div class="list-group-item @(!notification.IsRead ? "bg-light" : "")">
+                                            <div class="d-flex w-100 justify-content-between align-items-start">
+                                                <div class="flex-grow-1">
+                                                    <div class="d-flex align-items-center mb-1">
+                                                        @if (!notification.IsRead)
+                                                        {
+                                                            <span class="badge bg-primary me-2">New</span>
+                                                        }
+                                                        <span class="badge me-2 @GetNotificationTypeBadgeClass(notification.Type)">
+                                                            @notification.Type
+                                                        </span>
+                                                        <small class="text-muted">@GetRelativeTime(notification.CreatedAt)</small>
+                                                    </div>
+                                                    <h6 class="mb-1">@notification.Title</h6>
+                                                    <p class="mb-0 small text-muted">@notification.Message</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
         <!-- Tank Overview Card -->
         <div class="card mb-4 shadow">
             <div class="card-header bg-primary text-white">
@@ -894,5 +986,34 @@ else
             ProteinSkimmer => "bg-success text-white",
             _ => "bg-secondary text-white"
         };
+    }
+
+    private string GetNotificationTypeBadgeClass(NotificationType type)
+    {
+        return type switch
+        {
+            NotificationType.Reminder => "bg-info",
+            NotificationType.WaterParameterAlert => "bg-warning",
+            NotificationType.EquipmentAlert => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetRelativeTime(DateTime dateTime)
+    {
+        var timeSpan = DateTime.UtcNow - dateTime;
+
+        if (timeSpan.TotalMinutes < 1)
+            return "Just now";
+        if (timeSpan.TotalMinutes < 60)
+            return $"{(int)timeSpan.TotalMinutes}m ago";
+        if (timeSpan.TotalHours < 24)
+            return $"{(int)timeSpan.TotalHours}h ago";
+        if (timeSpan.TotalDays < 7)
+            return $"{(int)timeSpan.TotalDays}d ago";
+        if (timeSpan.TotalDays < 30)
+            return $"{(int)(timeSpan.TotalDays / 7)}w ago";
+
+        return dateTime.ToLocalTime().ToString("MMM dd");
     }
 }

@@ -1,0 +1,385 @@
+@page "/reminders"
+@using AquaHub.Models
+@using AquaHub.Models.Enums
+@using AquaHub.Services.Interfaces
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@inject IReminderService ReminderService
+@inject ITankService TankService
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+<PageTitle>Reminders - AquaHub</PageTitle>
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Reminders</h1>
+        <button class="btn btn-primary" @onclick="ShowAddReminderForm">
+            <i class="bi bi-plus-circle"></i> Add Reminder
+        </button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Tabs for different views -->
+        <ul class="nav nav-tabs mb-4">
+            <li class="nav-item">
+                <a class="nav-link @(activeTab == "upcoming" ? "active" : "")" 
+                   @onclick='() => activeTab = "upcoming"' 
+                   style="cursor: pointer;">
+                    Upcoming (@upcomingReminders.Count)
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @(activeTab == "overdue" ? "active" : "")" 
+                   @onclick='() => activeTab = "overdue"' 
+                   style="cursor: pointer;">
+                    Overdue (@overdueReminders.Count)
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @(activeTab == "all" ? "active" : "")" 
+                   @onclick='() => activeTab = "all"' 
+                   style="cursor: pointer;">
+                    All (@allReminders.Count)
+                </a>
+            </li>
+        </ul>
+
+        <!-- Reminder List -->
+        @if (GetDisplayReminders().Count == 0)
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> 
+                @if (activeTab == "overdue")
+                {
+                    <text>No overdue reminders. Great job staying on top of things!</text>
+                }
+                else if (activeTab == "upcoming")
+                {
+                    <text>No upcoming reminders in the next 7 days.</text>
+                }
+                else
+                {
+                    <text>You don't have any reminders yet. Click "Add Reminder" to create your first one.</text>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="row g-3">
+                @foreach (var reminder in GetDisplayReminders())
+                {
+                    <div class="col-12">
+                        <div class="card @(reminder.NextDueDate < DateTime.UtcNow ? "border-danger" : "")">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h5 class="card-title mb-1">
+                                            @reminder.Title
+                                            @if (!reminder.IsActive)
+                                            {
+                                                <span class="badge bg-secondary">Inactive</span>
+                                            }
+                                            @if (reminder.NextDueDate < DateTime.UtcNow && reminder.IsActive)
+                                            {
+                                                <span class="badge bg-danger">Overdue</span>
+                                            }
+                                        </h5>
+                                        <div class="text-muted small mb-2">
+                                            <span class="badge bg-info me-2">@reminder.Type</span>
+                                            <span class="badge bg-secondary me-2">@reminder.Frequency</span>
+                                            @if (reminder.Tank != null)
+                                            {
+                                                <span class="badge bg-primary">@reminder.Tank.Name</span>
+                                            }
+                                        </div>
+                                        @if (!string.IsNullOrEmpty(reminder.Description))
+                                        {
+                                            <p class="card-text mb-2">@reminder.Description</p>
+                                        }
+                                        <div class="small">
+                                            <i class="bi bi-calendar-event"></i> 
+                                            <strong>Due:</strong> @reminder.NextDueDate.ToLocalTime().ToString("MMM dd, yyyy 'at' h:mm tt")
+                                            @if (reminder.LastCompletedDate.HasValue)
+                                            {
+                                                <span class="ms-3">
+                                                    <i class="bi bi-check-circle"></i> 
+                                                    <strong>Last completed:</strong> @reminder.LastCompletedDate.Value.ToLocalTime().ToString("MMM dd, yyyy")
+                                                </span>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="btn-group ms-3">
+                                        <button class="btn btn-sm btn-success" @onclick="() => CompleteReminder(reminder.Id)" disabled="@(!reminder.IsActive)">
+                                            <i class="bi bi-check-lg"></i> Complete
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => EditReminder(reminder)">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteReminder(reminder.Id)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+
+    <!-- Add/Edit Reminder Modal -->
+    @if (showReminderForm)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">@(editingReminder == null ? "Add Reminder" : "Edit Reminder")</h5>
+                        <button type="button" class="btn-close" @onclick="HideReminderForm"></button>
+                    </div>
+                    <div class="modal-body">
+                        <EditForm Model="@reminderForm" OnValidSubmit="SaveReminder">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary />
+
+                            <div class="mb-3">
+                                <label class="form-label">Title</label>
+                                <InputText @bind-Value="reminderForm.Title" class="form-control" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Description</label>
+                                <InputTextArea @bind-Value="reminderForm.Description" class="form-control" rows="3" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Type</label>
+                                <InputSelect @bind-Value="reminderForm.Type" class="form-select">
+                                    @foreach (var type in Enum.GetValues<ReminderType>())
+                                    {
+                                        <option value="@type">@type</option>
+                                    }
+                                </InputSelect>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Tank (Optional)</label>
+                                <InputSelect @bind-Value="reminderForm.TankId" class="form-select">
+                                    <option value="">-- All Tanks --</option>
+                                    @foreach (var tank in tanks)
+                                    {
+                                        <option value="@tank.Id">@tank.Name</option>
+                                    }
+                                </InputSelect>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Frequency</label>
+                                <InputSelect @bind-Value="reminderForm.Frequency" class="form-select">
+                                    @foreach (var freq in Enum.GetValues<ReminderFrequency>())
+                                    {
+                                        <option value="@freq">@freq</option>
+                                    }
+                                </InputSelect>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Next Due Date</label>
+                                <InputDate @bind-Value="reminderForm.NextDueDate" class="form-control" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Notify me (hours before due)</label>
+                                <InputNumber @bind-Value="reminderForm.NotificationHoursBefore" class="form-control" min="1" max="168" />
+                            </div>
+
+                            <div class="mb-3 form-check">
+                                <InputCheckbox @bind-Value="reminderForm.SendEmailNotification" class="form-check-input" id="emailNotif" />
+                                <label class="form-check-label" for="emailNotif">
+                                    Send email notification
+                                </label>
+                            </div>
+
+                            <div class="mb-3 form-check">
+                                <InputCheckbox @bind-Value="reminderForm.IsActive" class="form-check-input" id="isActive" />
+                                <label class="form-check-label" for="isActive">
+                                    Active
+                                </label>
+                            </div>
+
+                            <div class="d-flex justify-content-end gap-2">
+                                <button type="button" class="btn btn-secondary" @onclick="HideReminderForm">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Save</button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthState { get; set; }
+
+    private bool isLoading = true;
+    private string activeTab = "upcoming";
+    private List<Reminder> allReminders = new();
+    private List<Reminder> upcomingReminders = new();
+    private List<Reminder> overdueReminders = new();
+    private List<Tank> tanks = new();
+    
+    private bool showReminderForm = false;
+    private Reminder? editingReminder = null;
+    private ReminderFormModel reminderForm = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthState == null) return;
+        
+        var authState = await AuthState;
+        var user = authState.User;
+        
+        if (!user.Identity?.IsAuthenticated ?? true) return;
+
+        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId)) return;
+
+        await LoadReminders(userId);
+        tanks = await TankService.GetAllTanksAsync(userId);
+        
+        isLoading = false;
+    }
+
+    private async Task LoadReminders(string userId)
+    {
+        allReminders = await ReminderService.GetActiveRemindersAsync(userId);
+        upcomingReminders = await ReminderService.GetUpcomingRemindersAsync(userId);
+        overdueReminders = await ReminderService.GetOverdueRemindersAsync(userId);
+    }
+
+    private List<Reminder> GetDisplayReminders()
+    {
+        return activeTab switch
+        {
+            "upcoming" => upcomingReminders,
+            "overdue" => overdueReminders,
+            _ => allReminders
+        };
+    }
+
+    private void ShowAddReminderForm()
+    {
+        editingReminder = null;
+        reminderForm = new ReminderFormModel
+        {
+            NextDueDate = DateTime.Today.AddDays(1),
+            NotificationHoursBefore = 24,
+            IsActive = true,
+            Frequency = ReminderFrequency.Weekly,
+            Type = ReminderType.Maintenance
+        };
+        showReminderForm = true;
+    }
+
+    private void EditReminder(Reminder reminder)
+    {
+        editingReminder = reminder;
+        reminderForm = new ReminderFormModel
+        {
+            Title = reminder.Title,
+            Description = reminder.Description,
+            Type = reminder.Type,
+            TankId = reminder.TankId?.ToString() ?? "",
+            Frequency = reminder.Frequency,
+            NextDueDate = reminder.NextDueDate.ToLocalTime().Date,
+            NotificationHoursBefore = reminder.NotificationHoursBefore,
+            SendEmailNotification = reminder.SendEmailNotification,
+            IsActive = reminder.IsActive
+        };
+        showReminderForm = true;
+    }
+
+    private void HideReminderForm()
+    {
+        showReminderForm = false;
+        editingReminder = null;
+    }
+
+    private async Task SaveReminder()
+    {
+        var authState = await AuthState!;
+        var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId)) return;
+
+        var reminder = editingReminder ?? new Reminder { UserId = userId };
+        
+        reminder.Title = reminderForm.Title ?? "";
+        reminder.Description = reminderForm.Description;
+        reminder.Type = reminderForm.Type;
+        reminder.TankId = int.TryParse(reminderForm.TankId, out var tankId) ? tankId : null;
+        reminder.Frequency = reminderForm.Frequency;
+        reminder.NextDueDate = DateTime.SpecifyKind(reminderForm.NextDueDate, DateTimeKind.Utc);
+        reminder.NotificationHoursBefore = reminderForm.NotificationHoursBefore;
+        reminder.SendEmailNotification = reminderForm.SendEmailNotification;
+        reminder.IsActive = reminderForm.IsActive;
+
+        if (editingReminder == null)
+        {
+            await ReminderService.CreateReminderAsync(reminder);
+        }
+        else
+        {
+            await ReminderService.UpdateReminderAsync(reminder);
+        }
+
+        await LoadReminders(userId);
+        HideReminderForm();
+    }
+
+    private async Task CompleteReminder(int id)
+    {
+        var authState = await AuthState!;
+        var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId)) return;
+
+        await ReminderService.CompleteReminderAsync(id, userId);
+        await LoadReminders(userId);
+    }
+
+    private async Task DeleteReminder(int id)
+    {
+        var authState = await AuthState!;
+        var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId)) return;
+
+        await ReminderService.DeleteReminderAsync(id, userId);
+        await LoadReminders(userId);
+    }
+
+    private class ReminderFormModel
+    {
+        public string? Title { get; set; }
+        public string? Description { get; set; }
+        public ReminderType Type { get; set; }
+        public string TankId { get; set; } = "";
+        public ReminderFrequency Frequency { get; set; }
+        public DateTime NextDueDate { get; set; }
+        public int NotificationHoursBefore { get; set; }
+        public bool SendEmailNotification { get; set; }
+        public bool IsActive { get; set; }
+    }
+}

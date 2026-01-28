@@ -1,0 +1,251 @@
+@page "/notifications"
+@using AquaHub.Models
+@using AquaHub.Models.Enums
+@using AquaHub.Services.Interfaces
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@inject INotificationService NotificationService
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+<PageTitle>Notifications - AquaHub</PageTitle>
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>
+            Notifications
+            @if (unreadCount > 0)
+            {
+                <span class="badge bg-danger ms-2">@unreadCount</span>
+            }
+        </h1>
+        <div>
+            @if (unreadCount > 0)
+            {
+                <button class="btn btn-outline-primary me-2" @onclick="MarkAllAsRead">
+                    <i class="bi bi-check-all"></i> Mark All as Read
+                </button>
+            }
+            <a href="/notification-settings" class="btn btn-outline-secondary">
+                <i class="bi bi-gear"></i> Settings
+            </a>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Filter Tabs -->
+        <ul class="nav nav-tabs mb-4">
+            <li class="nav-item">
+                <a class="nav-link @(showUnreadOnly ? "" : "active")" 
+                   @onclick="() => ShowAll()" 
+                   style="cursor: pointer;">
+                    All (@notifications.Count)
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @(showUnreadOnly ? "active" : "")" 
+                   @onclick="() => ShowUnreadOnly()" 
+                   style="cursor: pointer;">
+                    Unread (@unreadCount)
+                </a>
+            </li>
+        </ul>
+
+        <!-- Notification List -->
+        @if (displayedNotifications.Count == 0)
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> 
+                @if (showUnreadOnly)
+                {
+                    <text>No unread notifications. You're all caught up!</text>
+                }
+                else
+                {
+                    <text>You don't have any notifications yet.</text>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="list-group">
+                @foreach (var notification in displayedNotifications)
+                {
+                    <div class="list-group-item list-group-item-action @(notification.IsRead ? "" : "bg-light border-primary")" 
+                         style="cursor: pointer;"
+                         @onclick="() => MarkAsRead(notification.Id)">
+                        <div class="d-flex w-100 justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-1">
+                                    @if (!notification.IsRead)
+                                    {
+                                        <span class="badge bg-primary me-2">New</span>
+                                    }
+                                    <span class="badge me-2 @GetNotificationTypeClass(notification.Type)">
+                                        @GetNotificationTypeIcon(notification.Type) @notification.Type
+                                    </span>
+                                    @if (notification.Tank != null)
+                                    {
+                                        <span class="badge bg-info me-2">@notification.Tank.Name</span>
+                                    }
+                                    <small class="text-muted">@GetRelativeTime(notification.CreatedAt)</small>
+                                </div>
+                                <h6 class="mb-1">@notification.Title</h6>
+                                <p class="mb-1 text-muted">@notification.Message</p>
+                            </div>
+                            <div class="btn-group-vertical ms-3">
+                                @if (!notification.IsRead)
+                                {
+                                    <button class="btn btn-sm btn-outline-primary" 
+                                            @onclick="() => MarkAsRead(notification.Id)"
+                                            @onclick:stopPropagation="true">
+                                        <i class="bi bi-check"></i>
+                                    </button>
+                                }
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        @onclick="() => DeleteNotification(notification.Id)"
+                                        @onclick:stopPropagation="true">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthState { get; set; }
+
+    private bool isLoading = true;
+    private bool showUnreadOnly = false;
+    private List<Notification> notifications = new();
+    private List<Notification> displayedNotifications = new();
+    private int unreadCount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthState == null) return;
+        
+        var authState = await AuthState;
+        var user = authState.User;
+        
+        if (!user.Identity?.IsAuthenticated ?? true) return;
+
+        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId)) return;
+
+        await LoadNotifications(userId);
+        
+        isLoading = false;
+    }
+
+    private async Task LoadNotifications(string userId)
+    {
+        notifications = await NotificationService.GetUserNotificationsAsync(userId);
+        unreadCount = await NotificationService.GetUnreadCountAsync(userId);
+        UpdateDisplayedNotifications();
+    }
+
+    private void UpdateDisplayedNotifications()
+    {
+        displayedNotifications = showUnreadOnly 
+            ? notifications.Where(n => !n.IsRead).ToList() 
+            : notifications;
+    }
+
+    private void ShowAll()
+    {
+        showUnreadOnly = false;
+        UpdateDisplayedNotifications();
+    }
+
+    private void ShowUnreadOnly()
+    {
+        showUnreadOnly = true;
+        UpdateDisplayedNotifications();
+    }
+
+    private async Task MarkAsRead(int id)
+    {
+        var authState = await AuthState!;
+        var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId)) return;
+
+        await NotificationService.MarkAsReadAsync(id, userId);
+        await LoadNotifications(userId);
+    }
+
+    private async Task MarkAllAsRead()
+    {
+        var authState = await AuthState!;
+        var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId)) return;
+
+        await NotificationService.MarkAllAsReadAsync(userId);
+        await LoadNotifications(userId);
+    }
+
+    private async Task DeleteNotification(int id)
+    {
+        var authState = await AuthState!;
+        var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId)) return;
+
+        await NotificationService.DeleteNotificationAsync(id, userId);
+        await LoadNotifications(userId);
+    }
+
+    private string GetNotificationTypeClass(NotificationType type)
+    {
+        return type switch
+        {
+            NotificationType.Reminder => "bg-info",
+            NotificationType.WaterParameterAlert => "bg-warning",
+            NotificationType.EquipmentAlert => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetNotificationTypeIcon(NotificationType type)
+    {
+        return type switch
+        {
+            NotificationType.Reminder => "🔔",
+            NotificationType.WaterParameterAlert => "⚠️",
+            NotificationType.EquipmentAlert => "🔧",
+            _ => "ℹ️"
+        };
+    }
+
+    private string GetRelativeTime(DateTime dateTime)
+    {
+        var timeSpan = DateTime.UtcNow - dateTime;
+        
+        if (timeSpan.TotalMinutes < 1)
+            return "Just now";
+        if (timeSpan.TotalMinutes < 60)
+            return $"{(int)timeSpan.TotalMinutes}m ago";
+        if (timeSpan.TotalHours < 24)
+            return $"{(int)timeSpan.TotalHours}h ago";
+        if (timeSpan.TotalDays < 7)
+            return $"{(int)timeSpan.TotalDays}d ago";
+        if (timeSpan.TotalDays < 30)
+            return $"{(int)(timeSpan.TotalDays / 7)}w ago";
+        
+        return dateTime.ToLocalTime().ToString("MMM dd, yyyy");
+    }
+}

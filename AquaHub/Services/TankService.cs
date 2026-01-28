@@ -178,6 +178,28 @@ public class TankService : ITankService
             .Take(5)
             .ToList();
 
+        // Get upcoming reminders for this tank (next 7 days)
+        var nextWeek = DateTime.UtcNow.AddDays(7);
+        viewModel.UpcomingReminders = await _context.Reminders
+            .Where(r => r.UserId == userId &&
+                       r.IsActive &&
+                       r.TankId == tankId &&
+                       r.NextDueDate <= nextWeek)
+            .OrderBy(r => r.NextDueDate)
+            .Take(5)
+            .ToListAsync();
+
+        // Get recent notifications for this tank (last 10)
+        viewModel.RecentNotifications = await _context.Notifications
+            .Where(n => n.UserId == userId && n.TankId == tankId)
+            .OrderByDescending(n => n.CreatedAt)
+            .Take(10)
+            .ToListAsync();
+
+        // Count unread notifications for this tank
+        viewModel.UnreadNotificationCount = await _context.Notifications
+            .CountAsync(n => n.UserId == userId && n.TankId == tankId && !n.IsRead);
+
         return viewModel;
     }
 }
