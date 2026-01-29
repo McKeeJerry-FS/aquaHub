@@ -1,5 +1,6 @@
 using System;
 using AquaHub.Models;
+using AquaHub.Models.ViewModels;
 
 namespace AquaHub.Services.Interfaces;
 
@@ -11,4 +12,5 @@ public interface IWaterTestService
     Task<WaterTest> CreateWaterTestAsync(WaterTest waterTest, int tankId, string userId);
     Task<WaterTest> UpdateWaterTestAsync(WaterTest waterTest, string userId);
     Task<bool> DeleteWaterTestAsync(int id, string userId);
+    Task<WaterParameterTrendsViewModel> GetParameterTrendsAsync(int tankId, string userId, DateTime? startDate = null, DateTime? endDate = null);
 }

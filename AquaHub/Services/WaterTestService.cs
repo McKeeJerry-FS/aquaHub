@@ -2,6 +2,7 @@ using System;
 using AquaHub.Data;
 using AquaHub.Models;
 using AquaHub.Models.Enums;
+using AquaHub.Models.ViewModels;
 using AquaHub.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -218,5 +219,277 @@ public class WaterTestService : IWaterTestService
                     waterTest, "Phosphate", waterTest.Phosphate.Value, null, maxPhosphate);
             }
         }
+    }
+
+    public async Task<WaterParameterTrendsViewModel> GetParameterTrendsAsync(int tankId, string userId, DateTime? startDate = null, DateTime? endDate = null)
+    {
+        // Verify tank ownership
+        var tank = await _context.Tanks
+            .FirstOrDefaultAsync(t => t.Id == tankId && t.UserId == userId);
+
+        if (tank == null)
+        {
+            throw new UnauthorizedAccessException("You don't have permission to access this tank.");
+        }
+
+        // Set default date range if not provided
+        var end = endDate ?? DateTime.UtcNow;
+        var start = startDate ?? end.AddMonths(-3); // Default to 3 months
+
+        // Get water tests within the date range
+        var waterTests = await _context.WaterTests
+            .Where(w => w.TankId == tankId && w.Timestamp >= start && w.Timestamp <= end)
+            .OrderBy(w => w.Timestamp)
+            .ToListAsync();
+
+        var viewModel = new WaterParameterTrendsViewModel
+        {
+            Tank = tank,
+            StartDate = start,
+            EndDate = end,
+            TotalTests = waterTests.Count,
+            ParameterTrends = new List<WaterParameterTrendViewModel>()
+        };
+
+        if (waterTests.Any())
+        {
+            // Calculate average test frequency
+            if (waterTests.Count > 1)
+            {
+                var totalDays = (waterTests.Last().Timestamp - waterTests.First().Timestamp).TotalDays;
+                viewModel.AverageTestFrequency = totalDays / (waterTests.Count - 1);
+            }
+
+            // Get ideal ranges based on tank type
+            var isSaltwater = tank.Type == AquariumType.Saltwater || tank.Type == AquariumType.Reef;
+            var isReef = tank.Type == AquariumType.Reef;
+
+            // pH Trend
+            viewModel.ParameterTrends.Add(AnalyzeParameter(
+                waterTests, "pH", test => test.PH,
+                isSaltwater ? 8.0 : 6.5,
+                isSaltwater ? 8.4 : 8.0));
+
+            // Temperature Trend
+            viewModel.ParameterTrends.Add(AnalyzeParameter(
+                waterTests, "Temperature", test => test.Temperature,
+                isSaltwater ? 75 : 72,
+                isSaltwater ? 80 : 82, "°F"));
+
+            // Ammonia Trend
+            viewModel.ParameterTrends.Add(AnalyzeParameter(
+                waterTests, "Ammonia", test => test.Ammonia,
+                null, 0.25, "ppm"));
+
+            // Nitrite Trend
+            viewModel.ParameterTrends.Add(AnalyzeParameter(
+                waterTests, "Nitrite", test => test.Nitrite,
+                null, 0.5, "ppm"));
+
+            // Nitrate Trend
+            viewModel.ParameterTrends.Add(AnalyzeParameter(
+                waterTests, "Nitrate", test => test.Nitrate,
+                null, isSaltwater ? 20 : 40, "ppm"));
+
+            // Saltwater-specific parameters
+            if (isSaltwater)
+            {
+                viewModel.ParameterTrends.Add(AnalyzeParameter(
+                    waterTests, "Salinity", test => test.Salinity,
+                    1.023, 1.026, "ppt"));
+
+                viewModel.ParameterTrends.Add(AnalyzeParameter(
+                    waterTests, "Alkalinity", test => test.Alkalinity,
+                    8, 12, "dKH"));
+
+                viewModel.ParameterTrends.Add(AnalyzeParameter(
+                    waterTests, "Phosphate", test => test.Phosphate,
+                    null, 0.03, "ppm"));
+            }
+
+            // Reef-specific parameters
+            if (isReef)
+            {
+                viewModel.ParameterTrends.Add(AnalyzeParameter(
+                    waterTests, "Calcium", test => test.Calcium,
+                    380, 450, "ppm"));
+
+                viewModel.ParameterTrends.Add(AnalyzeParameter(
+                    waterTests, "Magnesium", test => test.Magnesium,
+                    1250, 1350, "ppm"));
+            }
+
+            // Freshwater-specific parameters
+            if (tank.Type == AquariumType.Freshwater || tank.Type == AquariumType.Planted)
+            {
+                viewModel.ParameterTrends.Add(AnalyzeParameter(
+                    waterTests, "GH", test => test.GH,
+                    4, 12, "°dH"));
+
+                viewModel.ParameterTrends.Add(AnalyzeParameter(
+                    waterTests, "KH", test => test.KH,
+                    3, 8, "°dH"));
+
+                viewModel.ParameterTrends.Add(AnalyzeParameter(
+                    waterTests, "TDS", test => test.TDS,
+                    150, 250, "ppm"));
+
+                viewModel.ParameterTrends.Add(AnalyzeParameter(
+                    waterTests, "Phosphate", test => test.Phosphate,
+                    null, 1.0, "ppm"));
+            }
+
+            // Generate alerts
+            viewModel.Alerts = GenerateAlerts(viewModel.ParameterTrends);
+        }
+
+        return viewModel;
+    }
+
+    private WaterParameterTrendViewModel AnalyzeParameter(
+        List<WaterTest> waterTests,
+        string parameterName,
+        Func<WaterTest, double?> valueSelector,
+        double? idealMin,
+        double? idealMax,
+        string unit = "")
+    {
+        var dataPoints = waterTests
+            .Select(test => new DataPoint
+            {
+                Date = test.Timestamp,
+                Value = valueSelector(test)
+            })
+            .Where(dp => dp.Value.HasValue)
+            .ToList();
+
+        var values = dataPoints.Select(dp => dp.Value!.Value).ToList();
+
+        var trend = new WaterParameterTrendViewModel
+        {
+            ParameterName = parameterName,
+            DataPoints = dataPoints,
+            Unit = unit,
+            IdealMin = idealMin,
+            IdealMax = idealMax,
+            Statistics = new ParameterStatistics()
+        };
+
+        if (values.Any())
+        {
+            trend.Statistics.TotalReadings = values.Count;
+            trend.Statistics.CurrentValue = values.Last();
+            trend.Statistics.Average = values.Average();
+            trend.Statistics.Min = values.Min();
+            trend.Statistics.Max = values.Max();
+
+            // Calculate median
+            var sortedValues = values.OrderBy(v => v).ToList();
+            var mid = sortedValues.Count / 2;
+            trend.Statistics.Median = sortedValues.Count % 2 == 0
+                ? (sortedValues[mid - 1] + sortedValues[mid]) / 2
+                : sortedValues[mid];
+
+            // Calculate standard deviation
+            var mean = values.Average();
+            var sumOfSquares = values.Select(v => Math.Pow(v - mean, 2)).Sum();
+            trend.Statistics.StandardDeviation = Math.Sqrt(sumOfSquares / values.Count);
+
+            // Determine trend direction
+            if (values.Count >= 3)
+            {
+                var recentValues = values.TakeLast(Math.Min(10, values.Count)).ToList();
+                var firstHalf = recentValues.Take(recentValues.Count / 2).Average();
+                var secondHalf = recentValues.Skip(recentValues.Count / 2).Average();
+                var change = ((secondHalf - firstHalf) / firstHalf) * 100;
+
+                trend.Statistics.TrendPercentage = change;
+
+                if (Math.Abs(change) < 2)
+                    trend.Statistics.Trend = TrendDirection.Stable;
+                else if (change > 0)
+                    trend.Statistics.Trend = TrendDirection.Rising;
+                else
+                    trend.Statistics.Trend = TrendDirection.Falling;
+
+                // Check for high fluctuation
+                if (trend.Statistics.StandardDeviation > mean * 0.15)
+                    trend.Statistics.Trend = TrendDirection.Fluctuating;
+            }
+
+            // Check if current value is in ideal range
+            if (idealMin.HasValue && idealMax.HasValue)
+            {
+                trend.Statistics.IsInIdealRange =
+                    trend.Statistics.CurrentValue >= idealMin.Value &&
+                    trend.Statistics.CurrentValue <= idealMax.Value;
+
+                // Count days outside ideal range
+                trend.Statistics.DaysAboveIdeal = dataPoints.Count(dp => dp.Value > idealMax.Value);
+                trend.Statistics.DaysBelowIdeal = dataPoints.Count(dp => dp.Value < idealMin.Value);
+            }
+            else if (idealMax.HasValue)
+            {
+                trend.Statistics.IsInIdealRange = trend.Statistics.CurrentValue <= idealMax.Value;
+                trend.Statistics.DaysAboveIdeal = dataPoints.Count(dp => dp.Value > idealMax.Value);
+            }
+        }
+
+        return trend;
+    }
+
+    private Dictionary<string, List<string>> GenerateAlerts(List<WaterParameterTrendViewModel> trends)
+    {
+        var alerts = new Dictionary<string, List<string>>
+        {
+            { "Critical", new List<string>() },
+            { "Warning", new List<string>() },
+            { "Info", new List<string>() }
+        };
+
+        foreach (var trend in trends)
+        {
+            if (trend.Statistics.TotalReadings == 0) continue;
+
+            // Critical: Current value outside ideal range
+            if (!trend.Statistics.IsInIdealRange && trend.Statistics.CurrentValue.HasValue)
+            {
+                if (trend.IdealMin.HasValue && trend.Statistics.CurrentValue < trend.IdealMin.Value)
+                {
+                    alerts["Critical"].Add($"{trend.ParameterName} is below ideal range: {trend.Statistics.CurrentValue:F2}{trend.Unit} (ideal: {trend.IdealMin:F2}-{trend.IdealMax:F2}{trend.Unit})");
+                }
+                else if (trend.IdealMax.HasValue && trend.Statistics.CurrentValue > trend.IdealMax.Value)
+                {
+                    alerts["Critical"].Add($"{trend.ParameterName} is above ideal range: {trend.Statistics.CurrentValue:F2}{trend.Unit} (ideal max: {trend.IdealMax:F2}{trend.Unit})");
+                }
+            }
+
+            // Warning: Trend is moving towards dangerous levels
+            if (trend.Statistics.Trend == TrendDirection.Rising && trend.IdealMax.HasValue)
+            {
+                var percentToMax = ((trend.IdealMax.Value - trend.Statistics.CurrentValue!.Value) / trend.IdealMax.Value) * 100;
+                if (percentToMax < 20 && percentToMax > 0)
+                {
+                    alerts["Warning"].Add($"{trend.ParameterName} is rising and approaching maximum safe level");
+                }
+            }
+
+            if (trend.Statistics.Trend == TrendDirection.Falling && trend.IdealMin.HasValue)
+            {
+                var percentToMin = ((trend.Statistics.CurrentValue!.Value - trend.IdealMin.Value) / trend.IdealMin.Value) * 100;
+                if (percentToMin < 20 && percentToMin > 0)
+                {
+                    alerts["Warning"].Add($"{trend.ParameterName} is falling and approaching minimum safe level");
+                }
+            }
+
+            // Info: High fluctuation
+            if (trend.Statistics.Trend == TrendDirection.Fluctuating)
+            {
+                alerts["Info"].Add($"{trend.ParameterName} shows high fluctuation - consider more frequent testing");
+            }
+        }
+
+        return alerts;
     }
 }
