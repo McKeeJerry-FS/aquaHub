@@ -53,6 +53,7 @@ builder.Services.AddScoped<IFileUploadService, FileUploadService>();
 builder.Services.AddScoped<IReminderService, ReminderService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IEmailNotificationService, EmailNotificationService>();
+builder.Services.AddScoped<IGrowthRecordService, GrowthRecordService>();
 builder.Services.AddHostedService<ReminderBackgroundService>();
 builder.Services.AddSingleton<IEmailSender<AppUser>, IdentityNoOpEmailSender>();
 

@@ -25,6 +25,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Reminder> Reminders { get; set; }
     public DbSet<Notification> Notifications { get; set; }
     public DbSet<UserNotificationSettings> UserNotificationSettings { get; set; }
+    public DbSet<GrowthRecord> GrowthRecords { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

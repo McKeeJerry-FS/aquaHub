@@ -234,12 +234,20 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9Ib21lLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
+[/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Pages/Livestock/AddGrowthRecord.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9MaXZlc3RvY2svQWRkR3Jvd3RoUmVjb3JkLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
 [/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Pages/Livestock/DeleteLivestock.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9MaXZlc3RvY2svRGVsZXRlTGl2ZXN0b2NrLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
 [/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Pages/Livestock/EditLivestock.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9MaXZlc3RvY2svRWRpdExpdmVzdG9jay5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Pages/Livestock/GrowthTracker.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9MaXZlc3RvY2svR3Jvd3RoVHJhY2tlci5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
 [/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Pages/Livestock/LivestockDashboard.razor]
