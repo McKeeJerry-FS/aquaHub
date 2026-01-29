@@ -28,6 +28,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<UserNotificationSettings> UserNotificationSettings { get; set; }
     public DbSet<GrowthRecord> GrowthRecords { get; set; }
     public DbSet<Expense> Expenses { get; set; }
+    public DbSet<ParameterAlert> ParameterAlerts { get; set; }
+    public DbSet<TriggeredAlert> TriggeredAlerts { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -4,6 +4,7 @@ public enum NotificationType
 {
     Reminder,
     WaterParameterAlert,
+    ParameterAlert,
     EquipmentAlert,
     General
 }

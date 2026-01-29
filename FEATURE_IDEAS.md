@@ -10,7 +10,7 @@
 ## 🔔 Smart Notifications & Automation
 
 - [x] **Predictive Reminders** - AI-based suggestions for maintenance based on patterns ✅ _Added January 29, 2026_
-- [ ] **Parameter Alerts** - Notifications when water tests are outside ideal ranges
+- [x] **Parameter Alerts** - Notifications when water tests are outside ideal ranges ✅ _Added January 29, 2026_
 - [ ] **Equipment Failure Alerts** - Reminders when equipment is due for replacement
 - [ ] **Low Supply Warnings** - Track consumables (food, salt mix, medications)
 

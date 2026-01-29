@@ -12,11 +12,16 @@ public class WaterTestService : IWaterTestService
 {
     private readonly ApplicationDbContext _context;
     private readonly INotificationService? _notificationService;
+    private readonly IParameterAlertService? _parameterAlertService;
 
-    public WaterTestService(ApplicationDbContext context, INotificationService? notificationService = null)
+    public WaterTestService(
+        ApplicationDbContext context,
+        INotificationService? notificationService = null,
+        IParameterAlertService? parameterAlertService = null)
     {
         _context = context;
         _notificationService = notificationService;
+        _parameterAlertService = parameterAlertService;
     }
 
     public async Task<List<WaterTest>> GetAllWaterTestsAsync(string userId)
@@ -118,6 +123,21 @@ public class WaterTestService : IWaterTestService
 
     private async Task CheckWaterParametersAsync(WaterTest waterTest, Tank tank)
     {
+        // Use new ParameterAlertService if available
+        if (_parameterAlertService != null)
+        {
+            try
+            {
+                await _parameterAlertService.CheckWaterTestAsync(waterTest.Id);
+                return; // New system handled it
+            }
+            catch (Exception)
+            {
+                // Fall back to legacy system if new system fails
+            }
+        }
+
+        // Legacy notification system (kept for backwards compatibility)
         if (_notificationService == null)
             return;
 

@@ -49,4 +49,9 @@ public class Notification
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public DateTime? ReadAt { get; set; }
+
+    [StringLength(500)]
+    public string? ActionUrl { get; set; }
+
+    public AlertSeverity? Severity { get; set; }
 }

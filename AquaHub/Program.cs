@@ -57,6 +57,7 @@ builder.Services.AddScoped<IGrowthRecordService, GrowthRecordService>();
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
 builder.Services.AddScoped<ITankHealthService, TankHealthService>();
 builder.Services.AddScoped<IPredictiveReminderService, PredictiveReminderService>();
+builder.Services.AddScoped<IParameterAlertService, ParameterAlertService>();
 builder.Services.AddHostedService<ReminderBackgroundService>();
 builder.Services.AddHostedService<PredictiveReminderBackgroundService>();
 builder.Services.AddSingleton<IEmailSender<AppUser>, IdentityNoOpEmailSender>();
