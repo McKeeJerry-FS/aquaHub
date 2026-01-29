@@ -4,7 +4,7 @@
 
 - [x] **Water Parameter Trends** - Graph historical test results to spot trends ✅ _Added January 28, 2026_
 - [x] **Livestock Growth Tracker** - Track size/weight of fish over time ✅ _Added January 29, 2026_
-- [ ] **Cost Tracker** - Monitor expenses (equipment, livestock, supplies, electricity)
+- [x] **Cost Tracker** - Monitor expenses (equipment, livestock, supplies, electricity) ✅ _Added January 29, 2026_
 - [ ] **Health Score Dashboard** - Overall tank health rating based on parameters
 
 ## 🔔 Smart Notifications & Automation

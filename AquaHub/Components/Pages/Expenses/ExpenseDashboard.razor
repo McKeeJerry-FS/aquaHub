@@ -1,0 +1,349 @@
+@page "/expenses/dashboard"
+@using AquaHub.Models
+@using AquaHub.Models.Enums
+@using AquaHub.Services.Interfaces
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@inject IExpenseService ExpenseService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JSRuntime
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+<PageTitle>Expense Analytics</PageTitle>
+
+<div class="expense-dashboard">
+    <!-- Header -->
+    <div class="page-header bg-gradient">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center py-4">
+                <div>
+                    <h1 class="display-5 fw-bold mb-2">
+                        <i class="bi bi-graph-up text-success me-2"></i>
+                        Expense Analytics
+                    </h1>
+                    <p class="text-muted mb-0">Comprehensive spending analysis and insights</p>
+                </div>
+                <div>
+                    <a href="/expenses" class="btn btn-secondary btn-lg shadow-sm">
+                        <i class="bi bi-arrow-left me-2"></i> Back to Expenses
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container py-4">
+        @if (isLoading)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        }
+        else if (summary == null)
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                No expense data available. Start tracking expenses to see analytics!
+            </div>
+        }
+        else
+        {
+            <!-- Period Selector -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Start Date</label>
+                            <input type="date" class="form-control" @bind="startDate" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">End Date</label>
+                            <input type="date" class="form-control" @bind="endDate" />
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-primary w-100" @onclick="LoadData">
+                                <i class="bi bi-search me-2"></i> Apply
+                            </button>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-outline-secondary" @onclick="() => SetPeriod(30)">30d</button>
+                                <button class="btn btn-outline-secondary" @onclick="() => SetPeriod(90)">90d</button>
+                                <button class="btn btn-outline-secondary" @onclick="() => SetPeriod(365)">1y</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="icon-box bg-success bg-opacity-10 text-success me-3">
+                                    <i class="bi bi-cash-stack"></i>
+                                </div>
+                                <div>
+                                    <h6 class="text-muted mb-0">Total Spent</h6>
+                                    <h3 class="mb-0">$@summary.TotalAmount.ToString("N2")</h3>
+                                    @if (summary.PercentageChange.HasValue)
+                                    {
+                                        <small class="@(summary.PercentageChange.Value >= 0 ? "text-danger" : "text-success")">
+                                            <i class="bi bi-arrow-@(summary.PercentageChange.Value >= 0 ? "up" : "down")"></i>
+                                            @Math.Abs(summary.PercentageChange.Value).ToString("F1")% vs previous
+                                        </small>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="icon-box bg-info bg-opacity-10 text-info me-3">
+                                    <i class="bi bi-receipt"></i>
+                                </div>
+                                <div>
+                                    <h6 class="text-muted mb-0">Total Expenses</h6>
+                                    <h3 class="mb-0">@summary.TotalExpenses</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="icon-box bg-warning bg-opacity-10 text-warning me-3">
+                                    <i class="bi bi-bar-chart"></i>
+                                </div>
+                                <div>
+                                    <h6 class="text-muted mb-0">Average Expense</h6>
+                                    <h3 class="mb-0">$@summary.AverageExpense.ToString("N2")</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="icon-box bg-primary bg-opacity-10 text-primary me-3">
+                                    <i class="bi bi-trophy"></i>
+                                </div>
+                                <div>
+                                    <h6 class="text-muted mb-0">Top Category</h6>
+                                    <h5 class="mb-0">@(summary.TopCategory?.ToString() ?? "N/A")</h5>
+                                    <small class="text-muted">$@summary.TopCategoryAmount.ToString("N2")</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Spending by Category</h5>
+                        </div>
+                        <div class="card-body">
+                            <div style="height: 400px;">
+                                <canvas id="categoryChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Monthly Spending</h5>
+                        </div>
+                        <div class="card-body">
+                            <div style="height: 400px;">
+                                <canvas id="monthlyChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trend Chart -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Spending Trend</h5>
+                </div>
+                <div class="card-body">
+                    <div style="height: 300px;">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category Breakdown -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-list-ul me-2"></i>Category Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th class="text-end">Count</th>
+                                    <th class="text-end">Total</th>
+                                    <th class="text-end">Average</th>
+                                    <th>Percentage</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var category in summary.CategoryTotals.OrderByDescending(c => c.Value))
+                                {
+                                    var count = summary.CategoryCounts.GetValueOrDefault(category.Key, 0);
+                                    var percentage = (category.Value / summary.TotalAmount) * 100;
+                                    <tr>
+                                        <td>
+                                            <span class="badge @GetCategoryBadgeClass(category.Key)">
+                                                @category.Key
+                                            </span>
+                                        </td>
+                                        <td class="text-end">@count</td>
+                                        <td class="text-end fw-bold">$@category.Value.ToString("N2")</td>
+                                        <td class="text-end">$@(count > 0 ? (category.Value / count).ToString("N2") : "0.00")</td>
+                                        <td>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar bg-success" role="progressbar" 
+                                                     style="width: @percentage.ToString("F1")%">
+                                                    @percentage.ToString("F1")%
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private string userId = string.Empty;
+    private ExpenseSummary? summary;
+    private bool isLoading = true;
+    
+    private DateTime startDate = DateTime.UtcNow.AddMonths(-12);
+    private DateTime endDate = DateTime.UtcNow;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+        
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            summary = await ExpenseService.GetExpenseSummaryAsync(userId, startDate, endDate);
+            await RenderCharts();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RenderCharts()
+    {
+        if (summary == null || !summary.CategoryTotals.Any()) return;
+
+        try
+        {
+            // Category pie chart
+            var categoryData = summary.CategoryTotals
+                .OrderByDescending(c => c.Value)
+                .Select(c => new { category = c.Key.ToString(), amount = (double)c.Value })
+                .ToArray();
+
+            await JSRuntime.InvokeVoidAsync("expenseCharts.createCategoryPieChart", "categoryChart", categoryData);
+
+            // Monthly spending chart
+            var monthlyData = summary.MonthlyTotals
+                .OrderBy(m => m.Key)
+                .Select(m => new { 
+                    month = DateTime.ParseExact(m.Key, "yyyy-MM", null).ToString("MMM yyyy"), 
+                    amount = (double)m.Value 
+                })
+                .ToArray();
+
+            await JSRuntime.InvokeVoidAsync("expenseCharts.createMonthlyBarChart", "monthlyChart", monthlyData);
+            await JSRuntime.InvokeVoidAsync("expenseCharts.createTrendLineChart", "trendChart", monthlyData);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error rendering charts: {ex.Message}");
+        }
+    }
+
+    private async Task SetPeriod(int days)
+    {
+        endDate = DateTime.UtcNow;
+        startDate = endDate.AddDays(-days);
+        await LoadData();
+    }
+
+    private string GetCategoryBadgeClass(ExpenseCategory category) => category switch
+    {
+        ExpenseCategory.Equipment => "bg-primary",
+        ExpenseCategory.Livestock => "bg-info",
+        ExpenseCategory.Plants => "bg-success",
+        ExpenseCategory.FoodAndSupplements => "bg-warning",
+        ExpenseCategory.Medications => "bg-danger",
+        ExpenseCategory.Electricity => "bg-secondary",
+        _ => "bg-secondary"
+    };
+}
+
+<style>
+    .icon-box {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+
+    .table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        border-bottom: 2px solid #dee2e6;
+    }
+</style>
