@@ -230,8 +230,8 @@
                                         </td>
                                         <td>
                                             <div class="progress" style="height: 20px;">
-                                                <div class="progress-bar bg-success" role="progressbar" 
-                                                     style="width: @percentage.ToString("F1")%">
+                                                <div class="progress-bar bg-success" role="progressbar"
+                                                    style="width: @percentage.ToString("F1")%">
                                                     @percentage.ToString("F1")%
                                                 </div>
                                             </div>
@@ -251,7 +251,7 @@
     private string userId = string.Empty;
     private ExpenseSummary? summary;
     private bool isLoading = true;
-    
+
     private DateTime startDate = DateTime.UtcNow.AddMonths(-12);
     private DateTime endDate = DateTime.UtcNow;
 
@@ -259,7 +259,7 @@
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
-        
+
         await LoadData();
     }
 
@@ -288,20 +288,21 @@
         {
             // Category pie chart
             var categoryData = summary.CategoryTotals
-                .OrderByDescending(c => c.Value)
-                .Select(c => new { category = c.Key.ToString(), amount = (double)c.Value })
-                .ToArray();
+            .OrderByDescending(c => c.Value)
+            .Select(c => new { category = c.Key.ToString(), amount = (double)c.Value })
+            .ToArray();
 
             await JSRuntime.InvokeVoidAsync("expenseCharts.createCategoryPieChart", "categoryChart", categoryData);
 
             // Monthly spending chart
             var monthlyData = summary.MonthlyTotals
-                .OrderBy(m => m.Key)
-                .Select(m => new { 
-                    month = DateTime.ParseExact(m.Key, "yyyy-MM", null).ToString("MMM yyyy"), 
-                    amount = (double)m.Value 
-                })
-                .ToArray();
+            .OrderBy(m => m.Key)
+            .Select(m => new
+            {
+                month = DateTime.ParseExact(m.Key, "yyyy-MM", null).ToString("MMM yyyy"),
+                amount = (double)m.Value
+            })
+            .ToArray();
 
             await JSRuntime.InvokeVoidAsync("expenseCharts.createMonthlyBarChart", "monthlyChart", monthlyData);
             await JSRuntime.InvokeVoidAsync("expenseCharts.createTrendLineChart", "trendChart", monthlyData);
