@@ -6,6 +6,7 @@
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Authorization
 @inject ITankService TankService
+@inject ITankHealthService TankHealthService
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IJSRuntime JS
@@ -182,6 +183,128 @@ else
                         </div>
                     </div>
                 }
+            </div>
+        }
+
+        <!-- Tank Health Score Widget -->
+        @if (healthScore != null)
+        {
+            <div class="card mb-4 shadow border-0">
+                <div class="card-header bg-gradient d-flex justify-content-between align-items-center"
+                    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <h5 class="mb-0 text-white">
+                        <i class="bi bi-heart-pulse me-2"></i>Tank Health Score
+                    </h5>
+                    <a href="/health/tank/@Id" class="btn btn-sm btn-light">
+                        View Details
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-3 text-center">
+                            <div class="health-score-circle @GetHealthGradeColorClass(healthScore.Grade) mx-auto"
+                                style="width: 120px; height: 120px;">
+                                <span class="score-value"
+                                    style="font-size: 2.5rem;">@healthScore.OverallScore.ToString("F0")</span>
+                            </div>
+                            <h4 class="mt-3 mb-0">@healthScore.Grade</h4>
+                            <small class="text-muted">Overall Health</small>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <small class="fw-bold">Water Quality</small>
+                                    <small>@healthScore.WaterQualityScore.ToString("F0")</small>
+                                </div>
+                                <div class="progress" style="height: 10px;">
+                                    <div class="progress-bar @GetHealthScoreColorClass(healthScore.WaterQualityScore)"
+                                        style="width: @healthScore.WaterQualityScore%"></div>
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <small class="fw-bold">Maintenance</small>
+                                    <small>@healthScore.MaintenanceScore.ToString("F0")</small>
+                                </div>
+                                <div class="progress" style="height: 10px;">
+                                    <div class="progress-bar @GetHealthScoreColorClass(healthScore.MaintenanceScore)"
+                                        style="width: @healthScore.MaintenanceScore%"></div>
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <small class="fw-bold">Equipment</small>
+                                    <small>@healthScore.EquipmentScore.ToString("F0")</small>
+                                </div>
+                                <div class="progress" style="height: 10px;">
+                                    <div class="progress-bar @GetHealthScoreColorClass(healthScore.EquipmentScore)"
+                                        style="width: @healthScore.EquipmentScore%"></div>
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <small class="fw-bold">Livestock</small>
+                                    <small>@healthScore.LivestockScore.ToString("F0")</small>
+                                </div>
+                                <div class="progress" style="height: 10px;">
+                                    <div class="progress-bar @GetHealthScoreColorClass(healthScore.LivestockScore)"
+                                        style="width: @healthScore.LivestockScore%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="d-flex justify-content-between mb-1">
+                                    <small class="fw-bold">Stability</small>
+                                    <small>@healthScore.StabilityScore.ToString("F0")</small>
+                                </div>
+                                <div class="progress" style="height: 10px;">
+                                    <div class="progress-bar @GetHealthScoreColorClass(healthScore.StabilityScore)"
+                                        style="width: @healthScore.StabilityScore%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            @if (healthScore.Issues.Any())
+                            {
+                                <div class="alert alert-warning py-2 mb-2">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>
+                                    <strong>@healthScore.Issues.Count</strong> issue(s) detected
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-success py-2 mb-2">
+                                    <i class="bi bi-check-circle me-1"></i>
+                                    No issues detected
+                                </div>
+                            }
+                            @if (healthScore.Recommendations.Any())
+                            {
+                                <div class="alert alert-info py-2 mb-0">
+                                    <i class="bi bi-lightbulb me-1"></i>
+                                    <strong>@healthScore.Recommendations.Count</strong> recommendation(s)
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    @if (healthScore.Issues.Any() && healthScore.Issues.Count <= 3)
+                    {
+                        <hr />
+                        <div class="row g-2">
+                            @foreach (var issue in healthScore.Issues.Take(3))
+                            {
+                                <div class="col-12">
+                                    <div class="alert alert-@(issue.Severity.ToLower() == "critical" ? "danger" : "warning") py-2 mb-0">
+                                        <small>
+                                            <span
+                                                class="badge bg-@(issue.Severity.ToLower() == "critical" ? "danger" : "warning") me-2">@issue.Severity</span>
+                                            <strong>@issue.Title:</strong> @issue.Description
+                                        </small>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
             </div>
         }
 
@@ -840,6 +963,7 @@ else
 
     private Tank? tank;
     private TankDashboardViewModel? viewModel;
+    private TankHealthScore? healthScore;
     private bool isLoading = true;
     private string? userId;
     private string selectedMonth = "";
@@ -856,6 +980,7 @@ else
             if (userId != null)
             {
                 await LoadDashboard();
+                await LoadHealthScore();
             }
         }
         isLoading = false;
@@ -1016,4 +1141,82 @@ else
 
         return dateTime.ToLocalTime().ToString("MMM dd");
     }
+
+    private async Task LoadHealthScore()
+    {
+        if (userId == null) return;
+
+        try
+        {
+            healthScore = await TankHealthService.GetTankHealthScoreAsync(Id, userId);
+        }
+        catch
+        {
+            // Silently fail if health score can't be calculated
+            healthScore = null;
+        }
+    }
+
+    private string GetHealthGradeColorClass(HealthScoreGrade grade) => grade switch
+    {
+        HealthScoreGrade.Excellent => "grade-excellent",
+        HealthScoreGrade.Good => "grade-good",
+        HealthScoreGrade.Fair => "grade-fair",
+        HealthScoreGrade.Poor => "grade-poor",
+        HealthScoreGrade.Critical => "grade-critical",
+        _ => "grade-fair"
+    };
+
+    private string GetHealthScoreColorClass(double score) => score switch
+    {
+        >= 90 => "bg-success",
+        >= 75 => "bg-info",
+        >= 60 => "bg-warning",
+        _ => "bg-danger"
+    };
 }
+
+<style>
+    .health-score-circle {
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        border: 4px solid;
+    }
+
+    .grade-excellent {
+        background-color: rgba(25, 135, 84, 0.1);
+        border-color: #198754;
+        color: #198754;
+    }
+
+    .grade-good {
+        background-color: rgba(13, 202, 240, 0.1);
+        border-color: #0dcaf0;
+        color: #0dcaf0;
+    }
+
+    .grade-fair {
+        background-color: rgba(255, 193, 7, 0.1);
+        border-color: #ffc107;
+        color: #ffc107;
+    }
+
+    .grade-poor {
+        background-color: rgba(220, 53, 69, 0.1);
+        border-color: #dc3545;
+        color: #dc3545;
+    }
+
+    .grade-critical {
+        background-color: rgba(108, 117, 125, 0.1);
+        border-color: #6c757d;
+        color: #6c757d;
+    }
+
+    .score-value {
+        font-weight: bold;
+    }
+</style>

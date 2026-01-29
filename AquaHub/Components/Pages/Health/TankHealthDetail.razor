@@ -1,0 +1,623 @@
+@page "/health/tank/{tankId:int}"
+@using AquaHub.Models
+@using AquaHub.Models.Enums
+@using AquaHub.Services.Interfaces
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Web
+@inject ITankHealthService TankHealthService
+@inject ITankService TankService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+<PageTitle>@tankName Health Details</PageTitle>
+
+<div class="tank-health-detail">
+    <!-- Header -->
+    <div class="page-header bg-gradient">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center py-4">
+                <div>
+                    <h1 class="display-6 fw-bold mb-2">
+                        <i class="bi bi-heart-pulse text-danger me-2"></i>
+                        @tankName Health Report
+                    </h1>
+                    <p class="text-muted mb-0">Detailed health analysis and recommendations</p>
+                </div>
+                <div>
+                    <a href="/health" class="btn btn-secondary shadow-sm">
+                        <i class="bi bi-arrow-left me-2"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container py-4">
+        @if (isLoading)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        }
+        else if (healthScore == null)
+        {
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                Unable to calculate health score. Please ensure you have recent water tests and maintenance logs.
+            </div>
+        }
+        else
+        {
+            <!-- Overall Score Card -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body text-center">
+                            <h6 class="text-muted mb-3">Overall Health Score</h6>
+                            <div class="health-score-circle-large @GetGradeColorClass(healthScore.Grade) mx-auto mb-3">
+                                <span class="score-value-large">@healthScore.OverallScore.ToString("F0")</span>
+                            </div>
+                            <h3 class="mb-2">@healthScore.Grade</h3>
+                            <p class="text-muted mb-0">@GetGradeDescription(healthScore.Grade)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-8">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <h6 class="text-muted mb-3">Category Breakdown</h6>
+
+                            <!-- Water Quality -->
+                            <div class="category-detail mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <strong>Water Quality</strong>
+                                        <span class="text-muted ms-2">(35% weight)</span>
+                                    </div>
+                                    <span class="badge @GetScoreBadgeClass(healthScore.WaterQualityScore)">
+                                        @healthScore.WaterQualityScore.ToString("F0")
+                                    </span>
+                                </div>
+                                <div class="progress mb-2" style="height: 16px;">
+                                    <div class="progress-bar @GetScoreColorClass(healthScore.WaterQualityScore)"
+                                        style="width: @healthScore.WaterQualityScore%">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Maintenance -->
+                            <div class="category-detail mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <strong>Maintenance</strong>
+                                        <span class="text-muted ms-2">(25% weight)</span>
+                                    </div>
+                                    <span class="badge @GetScoreBadgeClass(healthScore.MaintenanceScore)">
+                                        @healthScore.MaintenanceScore.ToString("F0")
+                                    </span>
+                                </div>
+                                <div class="progress mb-2" style="height: 16px;">
+                                    <div class="progress-bar @GetScoreColorClass(healthScore.MaintenanceScore)"
+                                        style="width: @healthScore.MaintenanceScore%">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Equipment -->
+                            <div class="category-detail mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <strong>Equipment</strong>
+                                        <span class="text-muted ms-2">(15% weight)</span>
+                                    </div>
+                                    <span class="badge @GetScoreBadgeClass(healthScore.EquipmentScore)">
+                                        @healthScore.EquipmentScore.ToString("F0")
+                                    </span>
+                                </div>
+                                <div class="progress mb-2" style="height: 16px;">
+                                    <div class="progress-bar @GetScoreColorClass(healthScore.EquipmentScore)"
+                                        style="width: @healthScore.EquipmentScore%">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Livestock -->
+                            <div class="category-detail mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <strong>Livestock</strong>
+                                        <span class="text-muted ms-2">(15% weight)</span>
+                                    </div>
+                                    <span class="badge @GetScoreBadgeClass(healthScore.LivestockScore)">
+                                        @healthScore.LivestockScore.ToString("F0")
+                                    </span>
+                                </div>
+                                <div class="progress mb-2" style="height: 16px;">
+                                    <div class="progress-bar @GetScoreColorClass(healthScore.LivestockScore)"
+                                        style="width: @healthScore.LivestockScore%">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Stability -->
+                            <div class="category-detail">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <strong>Stability</strong>
+                                        <span class="text-muted ms-2">(10% weight)</span>
+                                    </div>
+                                    <span class="badge @GetScoreBadgeClass(healthScore.StabilityScore)">
+                                        @healthScore.StabilityScore.ToString("F0")
+                                    </span>
+                                </div>
+                                <div class="progress mb-2" style="height: 16px;">
+                                    <div class="progress-bar @GetScoreColorClass(healthScore.StabilityScore)"
+                                        style="width: @healthScore.StabilityScore%">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Issues Section -->
+            @if (healthScore.Issues.Any())
+            {
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-bottom">
+                        <h5 class="mb-0">
+                            <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                            Issues Detected (@healthScore.Issues.Count)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @foreach (var issue in healthScore.Issues.OrderByDescending(i =>
+                                        i.Severity == "Critical" ? 3 : i.Severity == "High" ? 2 : 1))
+                        {
+                            <div class="issue-card p-3 mb-3 border rounded @GetIssueBorderClass(issue.Severity)">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <span class="badge @GetSeverityBadgeClass(issue.Severity) me-2">
+                                                @issue.Severity
+                                            </span>
+                                            <span class="badge bg-secondary">@issue.Category</span>
+                                        </div>
+                                        <h6 class="mb-2">@issue.Title</h6>
+                                        <p class="text-muted mb-0">@issue.Description</p>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- Recommendations Section -->
+            @if (healthScore.Recommendations.Any())
+            {
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-bottom">
+                        <h5 class="mb-0">
+                            <i class="bi bi-lightbulb text-warning me-2"></i>
+                            Recommendations (@healthScore.Recommendations.Count)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @foreach (var rec in healthScore.Recommendations.OrderByDescending(r =>
+                                        r.Priority == "Critical" ? 4 : r.Priority == "High" ? 3 :
+                                        r.Priority == "Medium" ? 2 : 1))
+                        {
+                            <div class="recommendation-card p-3 mb-3 border rounded">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <span class="badge @GetPriorityBadgeClass(rec.Priority) me-2">
+                                                @rec.Priority Priority
+                                            </span>
+                                            <span class="badge bg-info">@rec.Category</span>
+                                        </div>
+                                        <h6 class="mb-2">@rec.Title</h6>
+                                        <p class="text-muted mb-0">@rec.Description</p>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(rec.ActionUrl))
+                                    {
+                                        <a href="@rec.ActionUrl" class="btn btn-sm btn-primary ms-3">
+                                            <i class="bi bi-arrow-right-circle me-1"></i>
+                                            Take Action
+                                        </a>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- Detailed Metrics -->
+            <div class="row g-4">
+                <!-- Water Quality Metrics -->
+                @if (healthScore.WaterQuality != null)
+                {
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-white border-bottom">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-droplet-fill text-primary me-2"></i>
+                                    Water Quality Details
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="metric-row">
+                                    <strong>Has Recent Test:</strong>
+                                    <span class="@GetMetricColorClass(healthScore.WaterQuality.HasRecentTest)">
+                                        @(healthScore.WaterQuality.HasRecentTest ? "✓ Yes" : "⚠ No")
+                                    </span>
+                                </div>
+                                <div class="metric-row">
+                                    <strong>Days Since Test:</strong>
+                                    <span>@healthScore.WaterQuality.DaysSinceLastTest days</span>
+                                </div>
+                                <div class="metric-row">
+                                    <strong>Parameters In Range:</strong>
+                                    <span class="text-success">@healthScore.WaterQuality.ParametersInRange</span>
+                                </div>
+                                <div class="metric-row">
+                                    <strong>Parameters Out of Range:</strong>
+                                    <span
+                                        class="@(healthScore.WaterQuality.ParametersOutOfRange > 0 ? "text-danger" : "text-success")">
+                                        @healthScore.WaterQuality.ParametersOutOfRange
+                                    </span>
+                                </div>
+                                <div class="metric-row">
+                                    <strong>Compliance Rate:</strong>
+                                    <span>@healthScore.WaterQuality.ParameterComplianceRate.ToString("F1")%</span>
+                                </div>
+                                <div class="metric-row border-top mt-2 pt-2">
+                                    <strong>Last Test:</strong>
+                                    <span class="text-muted">@GetTimeAgo(healthScore.LastWaterTest)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <!-- Maintenance Metrics -->
+                @if (healthScore.Maintenance != null)
+                {
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-white border-bottom">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-tools text-success me-2"></i>
+                                    Maintenance Details
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="metric-row">
+                                    <strong>Frequency (30 days):</strong>
+                                    <span>@healthScore.Maintenance.MaintenanceLogsLast30Days times</span>
+                                </div>
+                                <div class="metric-row">
+                                    <strong>Frequency (90 days):</strong>
+                                    <span>@healthScore.Maintenance.MaintenanceLogsLast90Days times</span>
+                                </div>
+                                <div class="metric-row">
+                                    <strong>Days Since Last:</strong>
+                                    <span class="@GetDaysSinceColor(healthScore.Maintenance.DaysSinceLastMaintenance)">
+                                        @healthScore.Maintenance.DaysSinceLastMaintenance days
+                                    </span>
+                                </div>
+                                <div class="metric-row border-top mt-2 pt-2">
+                                    <strong>Last Maintenance:</strong>
+                                    <span class="text-muted">@GetTimeAgo(healthScore.LastMaintenance)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <!-- Equipment Metrics -->
+                @if (healthScore.Equipment != null)
+                {
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-white border-bottom">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-gear-fill text-info me-2"></i>
+                                    Equipment Status
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="metric-row">
+                                    <strong>Total Equipment:</strong>
+                                    <span>@healthScore.Equipment.TotalEquipment items</span>
+                                </div>
+                                <div class="metric-row">
+                                    <strong>Working:</strong>
+                                    <span class="text-success">@healthScore.Equipment.WorkingEquipment items</span>
+                                </div>
+                                <div class="metric-row">
+                                    <strong>Failed/Offline:</strong>
+                                    <span class="@(healthScore.Equipment.FailedEquipment > 0 ? "text-danger" : "text-success")">
+                                        @healthScore.Equipment.FailedEquipment items
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <!-- Livestock Metrics -->
+                @if (healthScore.Livestock != null)
+                {
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-white border-bottom">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-fish text-warning me-2"></i>
+                                    Livestock Health
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="metric-row">
+                                    <strong>Total Livestock:</strong>
+                                    <span>@healthScore.Livestock.TotalLivestock</span>
+                                </div>
+                                <div class="metric-row">
+                                    <strong>Stocking Level:</strong>
+                                    <span class="@GetStockingLevelColor(healthScore.Livestock.IsOverstocked)">
+                                        @(healthScore.Livestock.IsOverstocked ? "⚠ Overstocked" : "✓ Appropriate")
+                                    </span>
+                                </div>
+                                <div class="metric-row">
+                                    <strong>Recent Growth Records:</strong>
+                                    <span>@healthScore.Livestock.RecentGrowthRecords records</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card border-0 shadow-sm mt-4">
+                <div class="card-header bg-white border-bottom">
+                    <h6 class="mb-0">
+                        <i class="bi bi-lightning-fill text-warning me-2"></i>
+                        Quick Actions
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <a href="/water-tests/add?tankId=@TankId" class="btn btn-outline-primary w-100">
+                                <i class="bi bi-plus-circle me-2"></i>
+                                Add Water Test
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="/maintenance/add?tankId=@TankId" class="btn btn-outline-success w-100">
+                                <i class="bi bi-wrench me-2"></i>
+                                Log Maintenance
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="/tanks/@TankId" class="btn btn-outline-info w-100">
+                                <i class="bi bi-droplet me-2"></i>
+                                View Tank
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="/livestock?tankId=@TankId" class="btn btn-outline-warning w-100">
+                                <i class="bi bi-fish me-2"></i>
+                                View Livestock
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int TankId { get; set; }
+
+    private string userId = string.Empty;
+    private string tankName = "Tank";
+    private TankHealthScore? healthScore;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            healthScore = await TankHealthService.GetTankHealthScoreAsync(TankId, userId);
+
+            if (healthScore != null)
+            {
+                tankName = healthScore.TankName;
+            }
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private string GetGradeDescription(HealthScoreGrade grade) => grade switch
+    {
+        HealthScoreGrade.Excellent => "Your tank is in excellent condition!",
+        HealthScoreGrade.Good => "Your tank is healthy with minor improvements possible.",
+        HealthScoreGrade.Fair => "Some issues need attention.",
+        HealthScoreGrade.Poor => "Multiple issues require immediate attention.",
+        HealthScoreGrade.Critical => "Critical issues detected - take action now!",
+        _ => ""
+    };
+
+    private string GetGradeColorClass(HealthScoreGrade grade) => grade switch
+    {
+        HealthScoreGrade.Excellent => "grade-excellent",
+        HealthScoreGrade.Good => "grade-good",
+        HealthScoreGrade.Fair => "grade-fair",
+        HealthScoreGrade.Poor => "grade-poor",
+        HealthScoreGrade.Critical => "grade-critical",
+        _ => "grade-fair"
+    };
+
+    private string GetScoreColorClass(double score) => score switch
+    {
+        >= 90 => "bg-success",
+        >= 75 => "bg-info",
+        >= 60 => "bg-warning",
+        _ => "bg-danger"
+    };
+
+    private string GetScoreBadgeClass(double score) => score switch
+    {
+        >= 90 => "bg-success",
+        >= 75 => "bg-info",
+        >= 60 => "bg-warning",
+        _ => "bg-danger"
+    };
+
+    private string GetSeverityBadgeClass(string severity) => severity.ToLower() switch
+    {
+        "critical" => "bg-danger",
+        "high" => "bg-warning",
+        _ => "bg-info"
+    };
+
+    private string GetPriorityBadgeClass(string priority) => priority.ToLower() switch
+    {
+        "critical" => "bg-danger",
+        "high" => "bg-warning",
+        "medium" => "bg-info",
+        _ => "bg-secondary"
+    };
+
+    private string GetIssueBorderClass(string severity) => severity.ToLower() switch
+    {
+        "critical" => "border-danger border-2",
+        "high" => "border-warning border-2",
+        _ => ""
+    };
+
+    private string GetMetricColorClass(bool isGood) => isGood ? "text-success" : "text-danger";
+
+    private string GetDaysSinceColor(int days) => days switch
+    {
+        <= 7 => "text-success",
+        <= 14 => "text-info",
+        <= 21 => "text-warning",
+        _ => "text-danger"
+    };
+
+    private string GetStockingLevelColor(bool isOverstocked) => isOverstocked ? "text-danger" : "text-success";
+
+    private string GetTimeAgo(DateTime date)
+    {
+        if (date == DateTime.MinValue) return "Never";
+
+        var days = (DateTime.UtcNow - date).Days;
+        return days switch
+        {
+            0 => "Today",
+            1 => "Yesterday",
+            < 7 => $"{days} days ago",
+            < 30 => $"{days / 7} weeks ago",
+            _ => $"{days / 30} months ago"
+        };
+    }
+}
+
+<style>
+    .health-score-circle-large {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        border: 6px solid;
+    }
+
+    .score-value-large {
+        font-size: 3rem;
+        font-weight: bold;
+    }
+
+    .grade-excellent {
+        background-color: rgba(25, 135, 84, 0.1);
+        border-color: #198754;
+        color: #198754;
+    }
+
+    .grade-good {
+        background-color: rgba(13, 202, 240, 0.1);
+        border-color: #0dcaf0;
+        color: #0dcaf0;
+    }
+
+    .grade-fair {
+        background-color: rgba(255, 193, 7, 0.1);
+        border-color: #ffc107;
+        color: #ffc107;
+    }
+
+    .grade-poor {
+        background-color: rgba(220, 53, 69, 0.1);
+        border-color: #dc3545;
+        color: #dc3545;
+    }
+
+    .grade-critical {
+        background-color: rgba(108, 117, 125, 0.1);
+        border-color: #6c757d;
+        color: #6c757d;
+    }
+
+    .metric-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .metric-row:last-child {
+        border-bottom: none;
+    }
+
+    .issue-card,
+    .recommendation-card {
+        transition: all 0.2s;
+    }
+
+    .issue-card:hover,
+    .recommendation-card:hover {
+        background-color: #f8f9fa;
+    }
+</style>
