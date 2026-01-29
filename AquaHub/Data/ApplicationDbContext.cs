@@ -23,6 +23,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<SaltwaterFish> SaltwaterFish { get; set; }
     public DbSet<FreshwaterInvertebrate> FreshwaterInvertebrates { get; set; }
     public DbSet<Reminder> Reminders { get; set; }
+    public DbSet<PredictiveReminder> PredictiveReminders { get; set; }
     public DbSet<Notification> Notifications { get; set; }
     public DbSet<UserNotificationSettings> UserNotificationSettings { get; set; }
     public DbSet<GrowthRecord> GrowthRecords { get; set; }

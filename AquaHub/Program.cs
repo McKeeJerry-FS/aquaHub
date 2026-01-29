@@ -56,7 +56,9 @@ builder.Services.AddScoped<IEmailNotificationService, EmailNotificationService>(
 builder.Services.AddScoped<IGrowthRecordService, GrowthRecordService>();
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
 builder.Services.AddScoped<ITankHealthService, TankHealthService>();
+builder.Services.AddScoped<IPredictiveReminderService, PredictiveReminderService>();
 builder.Services.AddHostedService<ReminderBackgroundService>();
+builder.Services.AddHostedService<PredictiveReminderBackgroundService>();
 builder.Services.AddSingleton<IEmailSender<AppUser>, IdentityNoOpEmailSender>();
 
 var app = builder.Build();
