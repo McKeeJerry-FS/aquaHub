@@ -294,6 +294,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9UYW5rcy9UYW5rcy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
+[/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Pages/Tanks/TankSetupWizard.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9UYW5rcy9UYW5rU2V0dXBXaXphcmQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
 [/Users/jerrymckeejr/Desktop/aquaHub/AquaHub/Components/Pages/WaterTests/AddWaterTest.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9XYXRlclRlc3RzL0FkZFdhdGVyVGVzdC5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
