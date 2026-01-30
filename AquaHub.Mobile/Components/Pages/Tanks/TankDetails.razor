@@ -1,0 +1,165 @@
+@page "/aquariums/{Id:int}"
+@using AquaHub.Shared.Services.Interfaces
+@using AquaHub.Shared.Models
+@inject ITankService TankService
+@inject IEquipmentService EquipmentService
+@inject ILivestockService LivestockService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager Navigation
+
+<PageTitle>@(tank?.Name ?? "Tank Details")</PageTitle>
+
+<div class="container-fluid p-3">
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="text-muted mt-2">Loading...</p>
+        </div>
+    }
+    else if (tank == null)
+    {
+        <div class="alert alert-warning">
+            <p>Tank not found</p>
+            <a href="/aquariums" class="btn btn-primary">Back to Tanks</a>
+        </div>
+    }
+    else
+    {
+        <div class="mb-3">
+            <a href="/aquariums" class="btn btn-sm btn-outline-secondary">← Back to Tanks</a>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-body">
+                <h3 class="card-title">@tank.Name</h3>
+                <p class="text-muted mb-3">@tank.VolumeGallons gallons • @tank.Type</p>
+
+                <div class="row">
+                    <div class="col-6">
+                        <small class="text-muted">Started</small>
+                        <p>@tank.StartDate.ToShortDateString()</p>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">Age</small>
+                        <p>@((DateTime.Now - tank.StartDate).Days) days</p>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(tank.Notes))
+                {
+                    <div class="mt-3">
+                        <small class="text-muted">Notes</small>
+                        <p>@tank.Notes</p>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Equipment (@equipment.Count)</h5>
+                <a href="/equipment/add?tankId=@Id" class="btn btn-sm btn-primary">+ Add</a>
+            </div>
+            <div class="card-body">
+                @if (!equipment.Any())
+                {
+                    <p class="text-muted">No equipment yet</p>
+                }
+                else
+                {
+                    <div class="list-group list-group-flush">
+                        @foreach (var item in equipment)
+                        {
+                            <div class="list-group-item px-0">
+                                <strong>@GetEquipmentType(item)</strong>
+                                <br />
+                                <small class="text-muted">@item.Brand @item.Model</small>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Livestock (@livestock.Count)</h5>
+                <a href="/livestock/add?tankId=@Id" class="btn btn-sm btn-primary">+ Add</a>
+            </div>
+            <div class="card-body">
+                @if (!livestock.Any())
+                {
+                    <p class="text-muted">No livestock yet</p>
+                }
+                else
+                {
+                    <div class="list-group list-group-flush">
+                        @foreach (var item in livestock)
+                        {
+                            <div class="list-group-item px-0">
+                                <strong>@item.Name</strong>
+                                <br />
+                                <small class="text-muted">@item.Species</small>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Tank? tank;
+    private List<Equipment> equipment = new();
+    private List<Livestock> livestock = new();
+    private bool isLoading = true;
+    private string? userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            if (userId != null)
+            {
+                tank = await TankService.GetTankByIdAsync(Id, userId);
+
+                if (tank != null)
+                {
+                    equipment = await EquipmentService.GetEquipmentByTankAsync(Id, userId);
+                    livestock = await LivestockService.GetLivestockByTankAsync(Id, userId);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading tank: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private string GetEquipmentType(Equipment item) => item switch
+    {
+        Filter f => $"Filter - {f.Type}",
+        Light l => $"Light - {l.Wattage}W",
+        Heater h => $"Heater - {h.MinTemperature}-{h.MaxTemperature}°F",
+        ProteinSkimmer => "Protein Skimmer",
+        _ => "Equipment"
+    };
+}

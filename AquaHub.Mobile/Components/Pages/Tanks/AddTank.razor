@@ -1,0 +1,108 @@
+@page "/aquariums/add"
+@using AquaHub.Shared.Services.Interfaces
+@using AquaHub.Shared.Models
+@using AquaHub.Shared.Models.Enums
+@inject ITankService TankService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager Navigation
+
+<PageTitle>Add Tank</PageTitle>
+
+<div class="container-fluid p-3">
+    <div class="mb-3">
+        <a href="/aquariums" class="btn btn-sm btn-outline-secondary">← Cancel</a>
+    </div>
+
+    <h2 class="mb-4">Add New Tank</h2>
+
+    <EditForm Model="tank" OnValidSubmit="HandleSubmit">
+        <DataAnnotationsValidator />
+
+        <div class="mb-3">
+            <label class="form-label">Tank Name *</label>
+            <InputText @bind-Value="tank.Name" class="form-control" placeholder="e.g., Living Room Reef" />
+            <ValidationMessage For="@(() => tank.Name)" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Volume (Gallons) *</label>
+            <InputNumber @bind-Value="tank.VolumeGallons" class="form-control" />
+            <ValidationMessage For="@(() => tank.VolumeGallons)" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Tank Type *</label>
+            <InputSelect @bind-Value="tank.Type" class="form-select">
+                <option value="">-- Select Type --</option>
+                @foreach (var type in Enum.GetValues<AquariumType>())
+                {
+                    <option value="@type">@type</option>
+                }
+            </InputSelect>
+            <ValidationMessage For="@(() => tank.Type)" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Start Date *</label>
+            <InputDate @bind-Value="tank.StartDate" class="form-control" />
+            <ValidationMessage For="@(() => tank.StartDate)" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Notes</label>
+            <InputTextArea @bind-Value="tank.Notes" class="form-control" rows="3" />
+            <ValidationMessage For="@(() => tank.Notes)" />
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">@errorMessage</div>
+        }
+
+        <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                @if (isSaving)
+                {
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                }
+                Save Tank
+            </button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    private Tank tank = new() { StartDate = DateTime.Today };
+    private bool isSaving = false;
+    private string? errorMessage;
+
+    private async Task HandleSubmit()
+    {
+        try
+        {
+            isSaving = true;
+            errorMessage = null;
+
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            if (userId == null)
+            {
+                errorMessage = "User not authenticated";
+                return;
+            }
+
+            await TankService.CreateTankAsync(tank, userId);
+            Navigation.NavigateTo("/aquariums");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+}
