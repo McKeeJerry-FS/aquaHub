@@ -7,6 +7,7 @@
 @using Microsoft.AspNetCore.Authorization
 @inject ITankService TankService
 @inject ITankHealthService TankHealthService
+@inject IParameterAlertService ParameterAlertService
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IJSRuntime JS
@@ -89,6 +90,68 @@ else
                                 </div>
                             }
                         </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Parameter Alerts -->
+        @if (tankAlerts.Any())
+        {
+            <div class="card mb-4 shadow border-danger">
+                <div class="card-header bg-danger text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="mb-0">
+                            <i class="bi bi-exclamation-triangle-fill"></i> Parameter Alerts
+                        </h3>
+                        <a href="/alerts" class="btn btn-light btn-sm">
+                            <i class="bi bi-gear"></i> Manage Alerts
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger mb-0">
+                        <h5 class="alert-heading">
+                            <i class="bi bi-droplet-fill"></i> Water Parameters Need Attention (@tankAlerts.Count)
+                        </h5>
+                        <hr />
+                        <div class="list-group">
+                            @foreach (var alert in tankAlerts.Take(5))
+                            {
+                                <div class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <span class="badge @GetSeverityBadgeClass(alert.Severity) me-2">
+                                                    @alert.Severity.ToString()
+                                                </span>
+                                                <strong>@alert.Parameter.ToString()</strong>
+                                            </div>
+                                            <p class="mb-1">@alert.Message</p>
+                                            <small class="text-muted">
+                                                <i class="bi bi-clock"></i> @GetTimeAgo(alert.TriggeredAt)
+                                            </small>
+                                        </div>
+                                        <div class="btn-group-vertical btn-group-sm">
+                                            <a href="/tanks/@viewModel.Tank?.Id/watertests/add" class="btn btn-primary">
+                                                <i class="bi bi-droplet"></i> Test
+                                            </a>
+                                            <button class="btn btn-outline-secondary" @onclick="() => AcknowledgeAlert(alert.Id)">
+                                                <i class="bi bi-check"></i> OK
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        @if (tankAlerts.Count > 5)
+                        {
+                            <div class="mt-3 text-center">
+                                <a href="/alerts" class="btn btn-outline-danger">
+                                    View All @tankAlerts.Count Alerts <i class="bi bi-arrow-right"></i>
+                                </a>
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
@@ -968,6 +1031,7 @@ else
     private string? userId;
     private string selectedMonth = "";
     private bool hasRendered = false;
+    private List<TriggeredAlert> tankAlerts = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -981,6 +1045,7 @@ else
             {
                 await LoadDashboard();
                 await LoadHealthScore();
+                await LoadTankAlertsAsync();
             }
         }
         isLoading = false;
@@ -1155,6 +1220,69 @@ else
             // Silently fail if health score can't be calculated
             healthScore = null;
         }
+    }
+
+    private async Task LoadTankAlertsAsync()
+    {
+        if (userId == null) return;
+
+        try
+        {
+            tankAlerts = await ParameterAlertService.GetTriggeredAlertsByTankAsync(Id, userId);
+        }
+        catch
+        {
+            // Silently fail if alerts can't be loaded
+            tankAlerts = new List<TriggeredAlert>();
+        }
+    }
+
+    private async Task AcknowledgeAlert(int alertId)
+    {
+        if (userId == null) return;
+
+        try
+        {
+            await ParameterAlertService.AcknowledgeAlertAsync(alertId, userId);
+            await LoadTankAlertsAsync();
+            StateHasChanged();
+        }
+        catch
+        {
+            // Handle error silently or show a message
+        }
+    }
+
+    private string GetSeverityBadgeClass(AlertSeverity severity)
+    {
+        return severity switch
+        {
+            AlertSeverity.Info => "bg-info",
+            AlertSeverity.Warning => "bg-warning text-dark",
+            AlertSeverity.Caution => "bg-orange text-white",
+            AlertSeverity.Critical => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetTimeAgo(DateTime dateTime)
+    {
+        var timeSpan = DateTime.UtcNow - dateTime;
+
+        if (timeSpan.TotalMinutes < 1)
+            return "Just now";
+        if (timeSpan.TotalMinutes < 60)
+            return $"{(int)timeSpan.TotalMinutes} minutes ago";
+        if (timeSpan.TotalHours < 24)
+            return $"{(int)timeSpan.TotalHours} hours ago";
+        if (timeSpan.TotalDays < 1)
+            return "Today";
+        if (timeSpan.TotalDays < 2)
+            return "Yesterday";
+        if (timeSpan.TotalDays < 7)
+            return $"{(int)timeSpan.TotalDays} days ago";
+
+        return dateTime.ToLocalTime().ToString("MMM dd, yyyy");
     }
 
     private string GetHealthGradeColorClass(HealthScoreGrade grade) => grade switch

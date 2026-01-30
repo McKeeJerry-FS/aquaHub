@@ -45,6 +45,15 @@
                     </NavLink>
                 </li>
                 <li class="nav-item">
+                    <NavLink class="nav-link" href="alerts">
+                        <i class="bi bi-exclamation-triangle me-1"></i> Alerts
+                        @if (activeAlertCount > 0)
+                        {
+                            <span class="badge bg-danger rounded-pill ms-1">@activeAlertCount</span>
+                        }
+                    </NavLink>
+                </li>
+                <li class="nav-item">
                     <NavLink class="nav-link" href="notifications">
                         <i class="bi bi-bell me-1"></i> Notifications
                     </NavLink>
@@ -92,25 +101,56 @@
     </div>
 </nav>
 
+@using AquaHub.Services.Interfaces
+@using System.Security.Claims
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IParameterAlertService ParameterAlertService
+
 @code {
     private bool collapseNavMenu = true;
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
     private string? currentUrl;
+    private int activeAlertCount = 0;
 
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
     }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
         NavigationManager.LocationChanged += OnLocationChanged;
+
+        await LoadAlertCountAsync();
     }
 
-    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    private async Task LoadAlertCountAsync()
+    {
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!string.IsNullOrEmpty(userId))
+            {
+                activeAlertCount = await ParameterAlertService.GetActiveAlertCountAsync(userId);
+            }
+        }
+        catch
+        {
+            // Silently fail if service is not available
+            activeAlertCount = 0;
+        }
+    }
+
+    private async void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
         currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+
+        // Reload alert count when navigating
+        await LoadAlertCountAsync();
+
         StateHasChanged();
     }
 

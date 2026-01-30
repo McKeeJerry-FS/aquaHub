@@ -386,3 +386,12 @@ h1:focus {
   );
   color: #155724;
 }
+
+/* Custom alert severity colors */
+.bg-orange {
+  background-color: #fd7e14 !important;
+}
+
+.border-orange {
+  border-color: #fd7e14 !important;
+}
