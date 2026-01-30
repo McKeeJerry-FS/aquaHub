@@ -30,4 +30,8 @@
     <Folder Include="Services/Interfaces/" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\AquaHub.Shared\AquaHub.Shared.csproj" />
+  </ItemGroup>
+
 </Project>

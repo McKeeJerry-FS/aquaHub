@@ -1,0 +1,1349 @@
+﻿@page "/tanks/dashboard/{Id:int}"
+@using AquaHub.Shared.Services.Interfaces
+@using AquaHub.Shared.Models
+@using AquaHub.Shared.Models.ViewModels
+@using AquaHub.Shared.Models.Enums
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@inject ITankService TankService
+@inject ITankHealthService TankHealthService
+@inject IParameterAlertService ParameterAlertService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JS
+@attribute [Authorize]
+
+<PageTitle>@(tank?.Name ?? "Tank") Dashboard</PageTitle>
+
+@if (isLoading)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="text-muted mt-3">Loading dashboard...</p>
+    </div>
+}
+else if (viewModel?.Tank == null)
+{
+    <div class="alert alert-danger">
+        <i class="bi bi-exclamation-triangle"></i> Tank not found.
+    </div>
+}
+else
+{
+    <div class="tank-dashboard-container">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="display-4 mb-0">
+                <i class="bi bi-droplet-fill"></i>
+                @viewModel.Tank.Name Dashboard
+            </h1>
+            <div class="d-flex gap-2">
+                <a href="/tanks/@viewModel.Tank?.Id/maintenance/add" class="btn btn-primary">
+                    <i class="bi bi-tools"></i> Log Maintenance
+                </a>
+                <a href="/tanks/@viewModel.Tank?.Id/watertests/add" class="btn btn-info">
+                    <i class="bi bi-droplet-half"></i> Record Water Test
+                </a>
+                <a href="/tanks/@viewModel.Tank?.Id/equipment/add" class="btn btn-success">
+                    <i class="bi bi-plus-circle"></i> Add Equipment
+                </a>
+                <a href="/tanks/edit/@viewModel.Tank?.Id" class="btn btn-warning">
+                    <i class="bi bi-pencil"></i> Edit Tank
+                </a>
+                <a href="/tanks" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Tanks
+                </a>
+            </div>
+        </div>
+
+        <!-- Equipment Maintenance Notifications -->
+        @if (viewModel.EquipmentNeedingMaintenance.Any())
+        {
+            <div class="card mb-4 shadow border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h3 class="mb-0">
+                        <i class="bi bi-exclamation-triangle-fill"></i> Equipment Maintenance Alerts
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning mb-0">
+                        <h5 class="alert-heading">
+                            <i class="bi bi-tools"></i> Equipment Needs Attention (@viewModel.EquipmentNeedingMaintenance.Count)
+                        </h5>
+                        <hr />
+                        <div class="row g-3">
+                            @foreach (var equipment in viewModel.EquipmentNeedingMaintenance)
+                            {
+                                <div class="col-md-6">
+                                    <div class="card bg-light h-100">
+                                        <div class="card-body">
+                                            <h6 class="mb-1">
+                                                <strong>@equipment.Brand @equipment.Model</strong>
+                                            </h6>
+                                            <p class="mb-1 small text-muted">Installed: @equipment.InstalledOn.ToShortDateString()
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Parameter Alerts -->
+        @if (tankAlerts.Any())
+        {
+            <div class="card mb-4 shadow border-danger">
+                <div class="card-header bg-danger text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="mb-0">
+                            <i class="bi bi-exclamation-triangle-fill"></i> Parameter Alerts
+                        </h3>
+                        <a href="/alerts" class="btn btn-light btn-sm">
+                            <i class="bi bi-gear"></i> Manage Alerts
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger mb-0">
+                        <h5 class="alert-heading">
+                            <i class="bi bi-droplet-fill"></i> Water Parameters Need Attention (@tankAlerts.Count)
+                        </h5>
+                        <hr />
+                        <div class="list-group">
+                            @foreach (var alert in tankAlerts.Take(5))
+                            {
+                                <div class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <span class="badge @GetSeverityBadgeClass(alert.Severity) me-2">
+                                                    @alert.Severity.ToString()
+                                                </span>
+                                                <strong>@alert.Parameter.ToString()</strong>
+                                            </div>
+                                            <p class="mb-1">@alert.Message</p>
+                                            <small class="text-muted">
+                                                <i class="bi bi-clock"></i> @GetTimeAgo(alert.TriggeredAt)
+                                            </small>
+                                        </div>
+                                        <div class="btn-group-vertical btn-group-sm">
+                                            <a href="/tanks/@viewModel.Tank?.Id/watertests/add" class="btn btn-primary">
+                                                <i class="bi bi-droplet"></i> Test
+                                            </a>
+                                            <button class="btn btn-outline-secondary" @onclick="() => AcknowledgeAlert(alert.Id)">
+                                                <i class="bi bi-check"></i> OK
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        @if (tankAlerts.Count > 5)
+                        {
+                            <div class="mt-3 text-center">
+                                <a href="/alerts" class="btn btn-outline-danger">
+                                    View All @tankAlerts.Count Alerts <i class="bi bi-arrow-right"></i>
+                                </a>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Upcoming Reminders and Recent Notifications -->
+        @if (viewModel.UpcomingReminders.Any() || viewModel.RecentNotifications.Any())
+        {
+            <div class="row mb-4 g-3">
+                <!-- Upcoming Reminders -->
+                @if (viewModel.UpcomingReminders.Any())
+                {
+                    <div class="col-lg-6">
+                        <div class="card shadow h-100">
+                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-alarm"></i> Upcoming Reminders
+                                </h5>
+                                <a href="/reminders" class="btn btn-sm btn-light">View All</a>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="list-group list-group-flush">
+                                    @foreach (var reminder in viewModel.UpcomingReminders)
+                                    {
+                                        <div
+                                            class="list-group-item @(reminder.NextDueDate < DateTime.UtcNow ? "border-start border-danger border-3" : "")">
+                                            <div class="d-flex w-100 justify-content-between align-items-start">
+                                                <div>
+                                                    <h6 class="mb-1">
+                                                        @reminder.Title
+                                                        @if (reminder.NextDueDate < DateTime.UtcNow)
+                                                        {
+                                                            <span class="badge bg-danger">Overdue</span>
+                                                        }
+                                                    </h6>
+                                                    <p class="mb-1 small text-muted">@reminder.Description</p>
+                                                    <small class="text-muted">
+                                                        <i class="bi bi-calendar-event"></i>
+                                                        Due: @reminder.NextDueDate.ToLocalTime().ToString("MMM dd, yyyy 'at' h:mm tt")
+                                                    </small>
+                                                </div>
+                                                <span class="badge bg-info">@reminder.Type</span>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <!-- Recent Notifications -->
+                @if (viewModel.RecentNotifications.Any())
+                {
+                    <div class="col-lg-6">
+                        <div class="card shadow h-100">
+                            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-bell"></i> Recent Notifications
+                                    @if (viewModel.UnreadNotificationCount > 0)
+                                    {
+                                        <span class="badge bg-danger ms-2">@viewModel.UnreadNotificationCount</span>
+                                    }
+                                </h5>
+                                <a href="/notifications" class="btn btn-sm btn-light">View All</a>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="list-group list-group-flush">
+                                    @foreach (var notification in viewModel.RecentNotifications)
+                                    {
+                                        <div class="list-group-item @(!notification.IsRead ? "bg-light" : "")">
+                                            <div class="d-flex w-100 justify-content-between align-items-start">
+                                                <div class="flex-grow-1">
+                                                    <div class="d-flex align-items-center mb-1">
+                                                        @if (!notification.IsRead)
+                                                        {
+                                                            <span class="badge bg-primary me-2">New</span>
+                                                        }
+                                                        <span class="badge me-2 @GetNotificationTypeBadgeClass(notification.Type)">
+                                                            @notification.Type
+                                                        </span>
+                                                        <small class="text-muted">@GetRelativeTime(notification.CreatedAt)</small>
+                                                    </div>
+                                                    <h6 class="mb-1">@notification.Title</h6>
+                                                    <p class="mb-0 small text-muted">@notification.Message</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- Tank Health Score Widget -->
+        @if (healthScore != null)
+        {
+            <div class="card mb-4 shadow border-0">
+                <div class="card-header bg-gradient d-flex justify-content-between align-items-center"
+                    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <h5 class="mb-0 text-white">
+                        <i class="bi bi-heart-pulse me-2"></i>Tank Health Score
+                    </h5>
+                    <a href="/health/tank/@Id" class="btn btn-sm btn-light">
+                        View Details
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-3 text-center">
+                            <div class="health-score-circle @GetHealthGradeColorClass(healthScore.Grade) mx-auto"
+                                style="width: 120px; height: 120px;">
+                                <span class="score-value"
+                                    style="font-size: 2.5rem;">@healthScore.OverallScore.ToString("F0")</span>
+                            </div>
+                            <h4 class="mt-3 mb-0">@healthScore.Grade</h4>
+                            <small class="text-muted">Overall Health</small>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <small class="fw-bold">Water Quality</small>
+                                    <small>@healthScore.WaterQualityScore.ToString("F0")</small>
+                                </div>
+                                <div class="progress" style="height: 10px;">
+                                    <div class="progress-bar @GetHealthScoreColorClass(healthScore.WaterQualityScore)"
+                                        style="width: @healthScore.WaterQualityScore%"></div>
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <small class="fw-bold">Maintenance</small>
+                                    <small>@healthScore.MaintenanceScore.ToString("F0")</small>
+                                </div>
+                                <div class="progress" style="height: 10px;">
+                                    <div class="progress-bar @GetHealthScoreColorClass(healthScore.MaintenanceScore)"
+                                        style="width: @healthScore.MaintenanceScore%"></div>
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <small class="fw-bold">Equipment</small>
+                                    <small>@healthScore.EquipmentScore.ToString("F0")</small>
+                                </div>
+                                <div class="progress" style="height: 10px;">
+                                    <div class="progress-bar @GetHealthScoreColorClass(healthScore.EquipmentScore)"
+                                        style="width: @healthScore.EquipmentScore%"></div>
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <small class="fw-bold">Livestock</small>
+                                    <small>@healthScore.LivestockScore.ToString("F0")</small>
+                                </div>
+                                <div class="progress" style="height: 10px;">
+                                    <div class="progress-bar @GetHealthScoreColorClass(healthScore.LivestockScore)"
+                                        style="width: @healthScore.LivestockScore%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="d-flex justify-content-between mb-1">
+                                    <small class="fw-bold">Stability</small>
+                                    <small>@healthScore.StabilityScore.ToString("F0")</small>
+                                </div>
+                                <div class="progress" style="height: 10px;">
+                                    <div class="progress-bar @GetHealthScoreColorClass(healthScore.StabilityScore)"
+                                        style="width: @healthScore.StabilityScore%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            @if (healthScore.Issues.Any())
+                            {
+                                <div class="alert alert-warning py-2 mb-2">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>
+                                    <strong>@healthScore.Issues.Count</strong> issue(s) detected
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-success py-2 mb-2">
+                                    <i class="bi bi-check-circle me-1"></i>
+                                    No issues detected
+                                </div>
+                            }
+                            @if (healthScore.Recommendations.Any())
+                            {
+                                <div class="alert alert-info py-2 mb-0">
+                                    <i class="bi bi-lightbulb me-1"></i>
+                                    <strong>@healthScore.Recommendations.Count</strong> recommendation(s)
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    @if (healthScore.Issues.Any() && healthScore.Issues.Count <= 3)
+                    {
+                        <hr />
+                        <div class="row g-2">
+                            @foreach (var issue in healthScore.Issues.Take(3))
+                            {
+                                <div class="col-12">
+                                    <div class="alert alert-@(issue.Severity.ToLower() == "critical" ? "danger" : "warning") py-2 mb-0">
+                                        <small>
+                                            <span
+                                                class="badge bg-@(issue.Severity.ToLower() == "critical" ? "danger" : "warning") me-2">@issue.Severity</span>
+                                            <strong>@issue.Title:</strong> @issue.Description
+                                        </small>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- Tank Overview Card -->
+        <div class="card mb-4 shadow">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0">Tank Overview</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        @if (!string.IsNullOrEmpty(viewModel.Tank.ImagePath))
+                        {
+                            <img src="/@viewModel.Tank.ImagePath" alt="@viewModel.Tank.Name" class="img-fluid rounded shadow-sm"
+                                style="max-height: 300px; object-fit: cover; width: 100%;" />
+                        }
+                        else
+                        {
+                            <div class="bg-secondary rounded d-flex align-items-center justify-content-center"
+                                style="height: 300px;">
+                                <i class="bi bi-droplet-fill text-white" style="font-size: 5rem;"></i>
+                            </div>
+                        }
+                    </div>
+                    <div class="col-md-8">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Volume:</dt>
+                            <dd class="col-sm-8">@viewModel.Tank.VolumeGallons gallons</dd>
+
+                            <dt class="col-sm-4">Type:</dt>
+                            <dd class="col-sm-8">@viewModel.Tank.Type</dd>
+
+                            <dt class="col-sm-4">Start Date:</dt>
+                            <dd class="col-sm-8">@viewModel.Tank.StartDate.ToShortDateString()</dd>
+
+                            @if (!string.IsNullOrWhiteSpace(viewModel.Tank.Notes))
+                            {
+                                <dt class="col-sm-4">Notes:</dt>
+                                <dd class="col-sm-8">@viewModel.Tank.Notes</dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="row mb-4 g-3">
+            <div class="col-md-3">
+                <div class="card text-white bg-success shadow h-100">
+                    <div class="card-body text-center p-3">
+                        <h2 class="display-5 mb-2">@viewModel.Tank.Livestock.Count</h2>
+                        <p class="card-text mb-0">Livestock</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <a href="/tanks/@viewModel.Tank.Id/watertests" class="text-decoration-none">
+                    <div class="card text-white bg-info shadow h-100">
+                        <div class="card-body text-center p-3">
+                            <h2 class="display-5 mb-2">@viewModel.Tank.WaterTests.Count</h2>
+                            <p class="card-text mb-0">Water Tests</p>
+                            <small class="d-block mt-1 opacity-75">
+                                <i class="bi bi-graph-up me-1"></i>View Dashboard
+                            </small>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-3">
+                <a href="/tanks/@viewModel.Tank.Id/maintenance" class="text-decoration-none">
+                    <div class="card text-white bg-warning shadow h-100">
+                        <div class="card-body text-center p-3">
+                            <h2 class="display-5 mb-2">@viewModel.Tank.MaintenanceLogs.Count</h2>
+                            <p class="card-text mb-0">Maintenance Logs</p>
+                            <small class="d-block mt-1 opacity-75">
+                                <i class="bi bi-graph-up me-1"></i>View Dashboard
+                            </small>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-danger shadow h-100">
+                    <div class="card-body text-center p-3">
+                        <h2 class="display-5 mb-2">@viewModel.Tank.Equipment.Count</h2>
+                        <p class="card-text mb-0">Equipment</p>
+                        @if (viewModel.EquipmentNeedingMaintenance.Any())
+                        {
+                            <small class="d-block mt-1">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                @viewModel.EquipmentNeedingMaintenance.Count needs attention
+                            </small>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Water Parameters Card -->
+        @if (viewModel.MostRecentWaterTest != null)
+        {
+            <div class="card mb-4 shadow">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0"><i class="bi bi-thermometer-half"></i> Current Water Parameters</h3>
+                    <small class="text-white">Last Tested: @viewModel.MostRecentWaterTest.Timestamp.ToString("MMM dd, yyyy h:mm                tt")</small>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <!-- Shared Parameters -->
+                        <div class="col-md-6">
+                            <h5 class="border-bottom pb-2 mb-3"><i class="bi bi-water"></i> Core Parameters</h5>
+                            <div class="row g-2">
+                                @if (viewModel.MostRecentWaterTest.Temperature.HasValue)
+                                {
+                                    <div class="col-sm-6">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center">
+                                                <i class="bi bi-thermometer text-danger fs-3"></i>
+                                                <h4 class="mb-0">@viewModel.MostRecentWaterTest.Temperature°F</h4>
+                                                <small class="text-muted">Temperature</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                @if (viewModel.MostRecentWaterTest.PH.HasValue)
+                                {
+                                    <div class="col-sm-6">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center">
+                                                <i class="bi bi-droplet text-primary fs-3"></i>
+                                                <h4 class="mb-0">@viewModel.MostRecentWaterTest.PH</h4>
+                                                <small class="text-muted">pH</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                @if (viewModel.MostRecentWaterTest.Ammonia.HasValue)
+                                {
+                                    <div class="col-sm-6">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center">
+                                                <i class="bi bi-exclamation-triangle text-warning fs-3"></i>
+                                                <h4 class="mb-0">@viewModel.MostRecentWaterTest.Ammonia ppm</h4>
+                                                <small class="text-muted">Ammonia</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                @if (viewModel.MostRecentWaterTest.Nitrite.HasValue)
+                                {
+                                    <div class="col-sm-6">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center">
+                                                <i class="bi bi-activity text-info fs-3"></i>
+                                                <h4 class="mb-0">@viewModel.MostRecentWaterTest.Nitrite ppm</h4>
+                                                <small class="text-muted">Nitrite</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                @if (viewModel.MostRecentWaterTest.Nitrate.HasValue)
+                                {
+                                    <div class="col-sm-6">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center">
+                                                <i class="bi bi-graph-up text-success fs-3"></i>
+                                                <h4 class="mb-0">@viewModel.MostRecentWaterTest.Nitrate ppm</h4>
+                                                <small class="text-muted">Nitrate</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Type-Specific Parameters -->
+                        <div class="col-md-6">
+                            @if (viewModel.Tank.Type == AquariumType.Reef || viewModel.Tank.Type == AquariumType.Saltwater)
+                            {
+                                <h5 class="border-bottom pb-2 mb-3"><i class="bi bi-water"></i> Reef Parameters</h5>
+                                <div class="row g-2">
+                                    @if (viewModel.MostRecentWaterTest.Salinity.HasValue)
+                                    {
+                                        <div class="col-sm-6">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <i class="bi bi-droplet-half text-info fs-3"></i>
+                                                    <h4 class="mb-0">@viewModel.MostRecentWaterTest.Salinity ppt</h4>
+                                                    <small class="text-muted">Salinity</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                    @if (viewModel.MostRecentWaterTest.Alkalinity.HasValue)
+                                    {
+                                        <div class="col-sm-6">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <i class="bi bi-bar-chart text-primary fs-3"></i>
+                                                    <h4 class="mb-0">@viewModel.MostRecentWaterTest.Alkalinity dKH</h4>
+                                                    <small class="text-muted">Alkalinity</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                    @if (viewModel.MostRecentWaterTest.Calcium.HasValue)
+                                    {
+                                        <div class="col-sm-6">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <i class="bi bi-gem text-success fs-3"></i>
+                                                    <h4 class="mb-0">@viewModel.MostRecentWaterTest.Calcium ppm</h4>
+                                                    <small class="text-muted">Calcium</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                    @if (viewModel.MostRecentWaterTest.Magnesium.HasValue)
+                                    {
+                                        <div class="col-sm-6">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <i class="bi bi-stars text-warning fs-3"></i>
+                                                    <h4 class="mb-0">@viewModel.MostRecentWaterTest.Magnesium ppm</h4>
+                                                    <small class="text-muted">Magnesium</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                    @if (viewModel.MostRecentWaterTest.Phosphate.HasValue)
+                                    {
+                                        <div class="col-sm-6">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <i class="bi bi-lightning text-danger fs-3"></i>
+                                                    <h4 class="mb-0">@viewModel.MostRecentWaterTest.Phosphate ppm</h4>
+                                                    <small class="text-muted">Phosphate</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else if (viewModel.Tank.Type == AquariumType.Freshwater || viewModel.Tank.Type ==
+                            AquariumType.Planted)
+                            {
+                                <h5 class="border-bottom pb-2 mb-3"><i class="bi bi-water"></i> Freshwater Parameters</h5>
+                                <div class="row g-2">
+                                    @if (viewModel.MostRecentWaterTest.GH.HasValue)
+                                    {
+                                        <div class="col-sm-6">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <i class="bi bi-droplet text-info fs-3"></i>
+                                                    <h4 class="mb-0">@viewModel.MostRecentWaterTest.GH dGH</h4>
+                                                    <small class="text-muted">General Hardness</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                    @if (viewModel.MostRecentWaterTest.KH.HasValue)
+                                    {
+                                        <div class="col-sm-6">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <i class="bi bi-shield text-primary fs-3"></i>
+                                                    <h4 class="mb-0">@viewModel.MostRecentWaterTest.KH dKH</h4>
+                                                    <small class="text-muted">Carbonate Hardness</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                    @if (viewModel.MostRecentWaterTest.TDS.HasValue)
+                                    {
+                                        <div class="col-sm-6">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <i class="bi bi-speedometer text-success fs-3"></i>
+                                                    <h4 class="mb-0">@viewModel.MostRecentWaterTest.TDS ppm</h4>
+                                                    <small class="text-muted">Total Dissolved Solids</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <div class="text-center mt-3">
+                        <button class="btn btn-sm btn-info" @onclick="AddWaterTest">
+                            <i class="bi bi-plus-circle"></i> Add New Test
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info mb-4">
+                <i class="bi bi-info-circle"></i> No water tests available yet.
+                <button class="btn btn-sm btn-info ms-2" @onclick="AddWaterTest">
+                    <i class="bi bi-plus-circle"></i> Add your first test
+                </button>
+            </div>
+        }
+
+        <!-- Charts Section -->
+        @if (viewModel.Tank.WaterTests.Any())
+        {
+            <div class="card mb-4 shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0"><i class="bi bi-graph-up"></i> Water Parameter Charts</h3>
+                    <div class="d-flex gap-2">
+                        <select @bind="selectedMonth" @bind:after="LoadDashboard" class="form-select form-select-sm"
+                            style="width: auto;">
+                            @foreach (var option in viewModel.AvailableMonths)
+                            {
+                                <option value="@option.Month-@option.Year">@option.DisplayText</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (viewModel.ChartLabels.Any())
+                    {
+                        <div class="row">
+                            <!-- pH Chart -->
+                            <div class="col-12 mb-4">
+                                <h5 class="text-center mb-3">pH Tracking</h5>
+                                <canvas id="phChart"></canvas>
+                            </div>
+
+                            <!-- Temperature Chart -->
+                            <div class="col-12 mb-4">
+                                <h5 class="text-center mb-3">Temperature Tracking (°F)</h5>
+                                <canvas id="temperatureChart"></canvas>
+                            </div>
+
+                            <!-- Nitrogen Cycle Chart -->
+                            <div class="col-12 mb-4">
+                                <h5 class="text-center mb-3">Nitrogen Cycle (ppm)</h5>
+                                <canvas id="nitrogenChart"></canvas>
+                            </div>
+
+                            <!-- Reef-Specific Charts -->
+                            @if (viewModel.Tank.Type == AquariumType.Reef || viewModel.Tank.Type == AquariumType.Saltwater)
+                            {
+                                <div class="col-12 mb-4">
+                                    <h5 class="text-center mb-3">Reef Parameters</h5>
+                                    <canvas id="reefChart"></canvas>
+                                </div>
+                            }
+
+                            <!-- Freshwater-Specific Charts -->
+                            @if (viewModel.Tank.Type == AquariumType.Freshwater || viewModel.Tank.Type == AquariumType.Planted)
+                            {
+                                <div class="col-12 mb-4">
+                                    <h5 class="text-center mb-3">Freshwater Hardness</h5>
+                                    <canvas id="hardnessChart"></canvas>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> No water tests found for the selected period.
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- Tabs for Different Sections -->
+        <ul class="nav nav-tabs" id="dashboardTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="livestock-tab" data-bs-toggle="tab" data-bs-target="#livestock"
+                    type="button" role="tab" aria-controls="livestock" aria-selected="true">
+                    <i class="bi bi-fish"></i> Livestock (@viewModel.Tank.Livestock.Count)
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tests-tab" data-bs-toggle="tab" data-bs-target="#tests" type="button"
+                    role="tab" aria-controls="tests" aria-selected="false">
+                    <i class="bi bi-clipboard-data"></i> Water Tests (@viewModel.Tank.WaterTests.Count)
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="maintenance-tab" data-bs-toggle="tab" data-bs-target="#maintenance"
+                    type="button" role="tab" aria-controls="maintenance" aria-selected="false">
+                    <i class="bi bi-tools"></i> Maintenance (@viewModel.Tank.MaintenanceLogs.Count)
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="equipment-tab" data-bs-toggle="tab" data-bs-target="#equipment" type="button"
+                    role="tab" aria-controls="equipment" aria-selected="false">
+                    <i class="bi bi-gear"></i> Equipment (@viewModel.Tank.Equipment.Count)
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content border border-top-0 p-3" id="dashboardTabsContent">
+            <!-- Livestock Tab -->
+            <div class="tab-pane fade show active" id="livestock" role="tabpanel" aria-labelledby="livestock-tab">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0">Livestock in this Tank</h4>
+                    <div class="d-flex gap-2">
+                        <a href="/livestock" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-list"></i> View All Livestock
+                        </a>
+                        <button class="btn btn-success btn-sm" @onclick="AddLivestock">
+                            <i class="bi bi-plus-circle"></i> Add Livestock
+                        </button>
+                    </div>
+                </div>
+                @if (viewModel.Tank.Livestock.Any())
+                {
+                    <div class="row g-3">
+                        @foreach (var livestock in viewModel.Tank.Livestock.OrderBy(l => l.Name))
+                        {
+                            <div class="col-md-6 col-lg-4">
+                                <div class="card h-100 shadow-sm">
+                                    <div class="card-body">
+                                        <h5 class="card-title">@livestock.Name</h5>
+                                        <p class="card-text">
+                                            <strong>Species:</strong> @livestock.Species<br />
+                                            <strong>Added:</strong> @livestock.AddedOn.ToShortDateString()
+                                        </p>
+                                        @if (!string.IsNullOrWhiteSpace(livestock.Notes))
+                                        {
+                                            <p class="card-text small text-muted">@livestock.Notes</p>
+                                        }
+                                        <div class="d-flex gap-2 mt-2">
+                                            <a href="/livestock/dashboard/@livestock.Id" class="btn btn-sm btn-primary">
+                                                <i class="bi bi-eye"></i> View
+                                            </a>
+                                            <a href="/livestock/edit/@livestock.Id" class="btn btn-sm btn-warning">
+                                                <i class="bi bi-pencil"></i> Edit
+                                            </a>
+                                            <a href="/livestock/delete/@livestock.Id" class="btn btn-sm btn-danger">
+                                                <i class="bi bi-trash"></i> Delete
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> No livestock added to this tank yet.
+                    </div>
+                }
+            </div>
+
+            <!-- Water Tests Tab -->
+            <div class="tab-pane fade" id="tests" role="tabpanel" aria-labelledby="tests-tab">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0">Water Test History</h4>
+                    <button class="btn btn-info btn-sm" @onclick="AddWaterTest">
+                        <i class="bi bi-plus-circle"></i> Add Test
+                    </button>
+                </div>
+                @if (viewModel.Tank.WaterTests.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Temp</th>
+                                    <th>pH</th>
+                                    <th>NH₃</th>
+                                    <th>NO₂</th>
+                                    <th>NO₃</th>
+                                    @if (viewModel.Tank.Type == AquariumType.Reef || viewModel.Tank.Type ==
+                                                                AquariumType.Saltwater)
+                                    {
+                                        <th>Salinity</th>
+                                        <th>Alk</th>
+                                        <th>Ca</th>
+                                        <th>Mg</th>
+                                    }
+                                    @if (viewModel.Tank.Type == AquariumType.Freshwater || viewModel.Tank.Type ==
+                                                                AquariumType.Planted)
+                                    {
+                                        <th>GH</th>
+                                        <th>KH</th>
+                                    }
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var test in viewModel.Tank.WaterTests.OrderByDescending(t => t.Timestamp).Take(20))
+                                {
+                                    <tr>
+                                        <td>@test.Timestamp.ToShortDateString()</td>
+                                        <td>@(test.Temperature?.ToString("F1") ?? "-")</td>
+                                        <td>@(test.PH?.ToString("F1") ?? "-")</td>
+                                        <td>@(test.Ammonia?.ToString("F2") ?? "-")</td>
+                                        <td>@(test.Nitrite?.ToString("F2") ?? "-")</td>
+                                        <td>@(test.Nitrate?.ToString("F1") ?? "-")</td>
+                                        @if (viewModel.Tank.Type == AquariumType.Reef || viewModel.Tank.Type ==
+                                                                    AquariumType.Saltwater)
+                                        {
+                                            <td>@(test.Salinity?.ToString("F1") ?? "-")</td>
+                                            <td>@(test.Alkalinity?.ToString("F1") ?? "-")</td>
+                                            <td>@(test.Calcium?.ToString("F0") ?? "-")</td>
+                                            <td>@(test.Magnesium?.ToString("F0") ?? "-")</td>
+                                        }
+                                        @if (viewModel.Tank.Type == AquariumType.Freshwater || viewModel.Tank.Type ==
+                                                                    AquariumType.Planted)
+                                        {
+                                            <td>@(test.GH?.ToString("F0") ?? "-")</td>
+                                            <td>@(test.KH?.ToString("F0") ?? "-")</td>
+                                        }
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> No water tests recorded yet.
+                    </div>
+                }
+            </div>
+
+            <!-- Maintenance Tab -->
+            <div class="tab-pane fade" id="maintenance" role="tabpanel" aria-labelledby="maintenance-tab">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0">Maintenance History</h4>
+                    <button class="btn btn-warning btn-sm" @onclick="AddMaintenance">
+                        <i class="bi bi-plus-circle"></i> Log Maintenance
+                    </button>
+                </div>
+                @if (viewModel.Tank.MaintenanceLogs.Any())
+                {
+                    <div class="list-group">
+                        @foreach (var log in viewModel.Tank.MaintenanceLogs.OrderByDescending(m => m.Timestamp).Take(10))
+                        {
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">@log.Type</h6>
+                                    <small>@log.Timestamp.ToString("MMM dd, yyyy")</small>
+                                </div>
+                                @if (log.WaterChangePercent.HasValue)
+                                {
+                                    <p class="mb-1">Water Change: @log.WaterChangePercent%</p>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(log.Notes))
+                                {
+                                    <p class="mb-0 small text-muted">@log.Notes</p>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> No maintenance logged yet.
+                    </div>
+                }
+            </div>
+
+            <!-- Equipment Tab -->
+            <div class="tab-pane fade" id="equipment" role="tabpanel" aria-labelledby="equipment-tab">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0">Equipment</h4>
+                    <button class="btn btn-danger btn-sm" @onclick="AddEquipment">
+                        <i class="bi bi-plus-circle"></i> Add Equipment
+                    </button>
+                </div>
+                @if (viewModel.Tank.Equipment.Any())
+                {
+                    <div class="row g-3">
+                        @foreach (var equipment in viewModel.Tank.Equipment.OrderBy(e => e.Brand))
+                        {
+                            <div class="col-md-6 col-lg-4">
+                                <div class="card h-100 shadow-sm">
+                                    <div class="card-header @GetEquipmentHeaderClass(equipment)">
+                                        <i class="@GetEquipmentIcon(equipment) me-2"></i>
+                                        @GetEquipmentTypeName(equipment)
+                                    </div>
+                                    <div class="card-body">
+                                        <h5 class="card-title">@equipment.Brand @equipment.Model</h5>
+                                        <p class="card-text">
+                                            <strong>Installed:</strong> @equipment.InstalledOn.ToShortDateString()<br />
+                                            <strong>Days Active:</strong> @((DateTime.Now - equipment.InstalledOn).Days) days
+                                        </p>
+
+                                        @if (equipment is Filter filter)
+                                        {
+                                            <div class="small text-muted">
+                                                <p class="mb-1"><strong>Type:</strong> @filter.Type</p>
+                                                <p class="mb-0"><strong>Flow:</strong> @filter.FlowRate GPH</p>
+                                            </div>
+                                        }
+                                        else if (equipment is Light light)
+                                        {
+                                            <div class="small text-muted">
+                                                <p class="mb-1"><strong>Wattage:</strong> @light.Wattage W</p>
+                                                @if (light.IsDimmable)
+                                                {
+                                                    <p class="mb-0"><strong>Intensity:</strong> @light.IntensityPercent%</p>
+                                                }
+                                            </div>
+                                        }
+                                        else if (equipment is ProteinSkimmer skimmer)
+                                        {
+                                            <div class="small text-muted">
+                                                <p class="mb-1"><strong>Capacity:</strong> @skimmer.Capacity gal</p>
+                                                <p class="mb-0"><strong>Cup Level:</strong> @skimmer.CupFillLevel%</p>
+                                            </div>
+                                        }
+                                    </div>
+                                    <div class="card-footer bg-light">
+                                        <div class="d-grid gap-2">
+                                            <a href="/equipment/dashboard/@equipment.Id" class="btn btn-sm btn-info">
+                                                <i class="bi bi-speedometer2"></i> View Dashboard
+                                            </a>
+                                            <div class="btn-group" role="group">
+                                                <a href="/equipment/edit/@equipment.Id" class="btn btn-sm btn-warning">
+                                                    <i class="bi bi-pencil"></i> Edit
+                                                </a>
+                                                <a href="/equipment/delete/@equipment.Id" class="btn btn-sm btn-danger">
+                                                    <i class="bi bi-trash"></i> Delete
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> No equipment added to this tank yet.
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Tank? tank;
+    private TankDashboardViewModel? viewModel;
+    private TankHealthScore? healthScore;
+    private bool isLoading = true;
+    private string? userId;
+    private string selectedMonth = "";
+    private bool hasRendered = false;
+    private List<TriggeredAlert> tankAlerts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId != null)
+            {
+                await LoadDashboard();
+                await LoadHealthScore();
+                await LoadTankAlertsAsync();
+            }
+        }
+        isLoading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            hasRendered = true;
+        }
+
+        if (hasRendered && viewModel != null && viewModel.ChartLabels.Any())
+        {
+            await RenderCharts();
+        }
+    }
+
+    private async Task LoadDashboard()
+    {
+        if (userId == null) return;
+
+        // Parse selected month/year
+        int month = DateTime.Now.Month;
+        int year = DateTime.Now.Year;
+
+        if (!string.IsNullOrEmpty(selectedMonth))
+        {
+            var parts = selectedMonth.Split('-');
+            if (parts.Length == 2)
+            {
+                month = int.Parse(parts[0]);
+                year = int.Parse(parts[1]);
+            }
+        }
+
+        viewModel = await TankService.GetTankDashboardAsync(Id, userId, month, year);
+        tank = viewModel?.Tank;
+
+        if (string.IsNullOrEmpty(selectedMonth) && viewModel != null)
+        {
+            selectedMonth = $"{month}-{year}";
+        }
+
+        StateHasChanged();
+
+        // Only render charts if we've already done the first render
+        if (hasRendered)
+        {
+            await RenderCharts();
+        }
+    }
+
+    private async Task RenderCharts()
+    {
+        if (viewModel == null || !viewModel.ChartLabels.Any()) return;
+
+        var chartData = new
+        {
+            labels = viewModel.ChartLabels,
+            phData = viewModel.PHData,
+            temperatureData = viewModel.TemperatureData,
+            ammoniaData = viewModel.AmmoniaData,
+            nitriteData = viewModel.NitriteData,
+            nitrateData = viewModel.NitrateData,
+            salinityData = viewModel.SalinityData,
+            alkalinityData = viewModel.AlkalinityData,
+            calciumData = viewModel.CalciumData,
+            magnesiumData = viewModel.MagnesiumData,
+            phosphateData = viewModel.PhosphateData,
+            ghData = viewModel.GHData,
+            khData = viewModel.KHData,
+            tdsData = viewModel.TDSData,
+            tankType = viewModel.Tank?.Type.ToString()
+        };
+
+        await JS.InvokeVoidAsync("renderTankCharts", chartData);
+    }
+
+    private void AddWaterTest()
+    {
+        Navigation.NavigateTo($"/tanks/{Id}/watertest/add");
+    }
+
+    private void AddLivestock()
+    {
+        Navigation.NavigateTo($"/tanks/{Id}/livestock/add");
+    }
+
+    private void AddMaintenance()
+    {
+        Navigation.NavigateTo($"/tanks/{Id}/maintenance/add");
+    }
+
+    private void AddEquipment()
+    {
+        Navigation.NavigateTo($"/tanks/{Id}/equipment/add");
+    }
+
+    private string GetEquipmentTypeName(Equipment equipment)
+    {
+        return equipment switch
+        {
+            Filter => "Filter",
+            Light => "Light",
+            ProteinSkimmer => "Protein Skimmer",
+            _ => "Equipment"
+        };
+    }
+
+    private string GetEquipmentIcon(Equipment equipment)
+    {
+        return equipment switch
+        {
+            Filter => "bi bi-funnel-fill",
+            Light => "bi bi-lightbulb-fill",
+            ProteinSkimmer => "bi bi-recycle",
+            _ => "bi bi-gear-fill"
+        };
+    }
+
+    private string GetEquipmentHeaderClass(Equipment equipment)
+    {
+        return equipment switch
+        {
+            Filter => "bg-warning text-dark",
+            Light => "bg-info text-white",
+            ProteinSkimmer => "bg-success text-white",
+            _ => "bg-secondary text-white"
+        };
+    }
+
+    private string GetNotificationTypeBadgeClass(NotificationType type)
+    {
+        return type switch
+        {
+            NotificationType.Reminder => "bg-info",
+            NotificationType.WaterParameterAlert => "bg-warning",
+            NotificationType.EquipmentAlert => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetRelativeTime(DateTime dateTime)
+    {
+        var timeSpan = DateTime.UtcNow - dateTime;
+
+        if (timeSpan.TotalMinutes < 1)
+            return "Just now";
+        if (timeSpan.TotalMinutes < 60)
+            return $"{(int)timeSpan.TotalMinutes}m ago";
+        if (timeSpan.TotalHours < 24)
+            return $"{(int)timeSpan.TotalHours}h ago";
+        if (timeSpan.TotalDays < 7)
+            return $"{(int)timeSpan.TotalDays}d ago";
+        if (timeSpan.TotalDays < 30)
+            return $"{(int)(timeSpan.TotalDays / 7)}w ago";
+
+        return dateTime.ToLocalTime().ToString("MMM dd");
+    }
+
+    private async Task LoadHealthScore()
+    {
+        if (userId == null) return;
+
+        try
+        {
+            healthScore = await TankHealthService.GetTankHealthScoreAsync(Id, userId);
+        }
+        catch
+        {
+            // Silently fail if health score can't be calculated
+            healthScore = null;
+        }
+    }
+
+    private async Task LoadTankAlertsAsync()
+    {
+        if (userId == null) return;
+
+        try
+        {
+            tankAlerts = await ParameterAlertService.GetTriggeredAlertsByTankAsync(Id, userId);
+        }
+        catch
+        {
+            // Silently fail if alerts can't be loaded
+            tankAlerts = new List<TriggeredAlert>();
+        }
+    }
+
+    private async Task AcknowledgeAlert(int alertId)
+    {
+        if (userId == null) return;
+
+        try
+        {
+            await ParameterAlertService.AcknowledgeAlertAsync(alertId, userId);
+            await LoadTankAlertsAsync();
+            StateHasChanged();
+        }
+        catch
+        {
+            // Handle error silently or show a message
+        }
+    }
+
+    private string GetSeverityBadgeClass(AlertSeverity severity)
+    {
+        return severity switch
+        {
+            AlertSeverity.Info => "bg-info",
+            AlertSeverity.Warning => "bg-warning text-dark",
+            AlertSeverity.Caution => "bg-orange text-white",
+            AlertSeverity.Critical => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetTimeAgo(DateTime dateTime)
+    {
+        var timeSpan = DateTime.UtcNow - dateTime;
+
+        if (timeSpan.TotalMinutes < 1)
+            return "Just now";
+        if (timeSpan.TotalMinutes < 60)
+            return $"{(int)timeSpan.TotalMinutes} minutes ago";
+        if (timeSpan.TotalHours < 24)
+            return $"{(int)timeSpan.TotalHours} hours ago";
+        if (timeSpan.TotalDays < 1)
+            return "Today";
+        if (timeSpan.TotalDays < 2)
+            return "Yesterday";
+        if (timeSpan.TotalDays < 7)
+            return $"{(int)timeSpan.TotalDays} days ago";
+
+        return dateTime.ToLocalTime().ToString("MMM dd, yyyy");
+    }
+
+    private string GetHealthGradeColorClass(HealthScoreGrade grade) => grade switch
+    {
+        HealthScoreGrade.Excellent => "grade-excellent",
+        HealthScoreGrade.Good => "grade-good",
+        HealthScoreGrade.Fair => "grade-fair",
+        HealthScoreGrade.Poor => "grade-poor",
+        HealthScoreGrade.Critical => "grade-critical",
+        _ => "grade-fair"
+    };
+
+    private string GetHealthScoreColorClass(double score) => score switch
+    {
+        >= 90 => "bg-success",
+        >= 75 => "bg-info",
+        >= 60 => "bg-warning",
+        _ => "bg-danger"
+    };
+}
+
+<style>
+    .health-score-circle {
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        border: 4px solid;
+    }
+
+    .grade-excellent {
+        background-color: rgba(25, 135, 84, 0.1);
+        border-color: #198754;
+        color: #198754;
+    }
+
+    .grade-good {
+        background-color: rgba(13, 202, 240, 0.1);
+        border-color: #0dcaf0;
+        color: #0dcaf0;
+    }
+
+    .grade-fair {
+        background-color: rgba(255, 193, 7, 0.1);
+        border-color: #ffc107;
+        color: #ffc107;
+    }
+
+    .grade-poor {
+        background-color: rgba(220, 53, 69, 0.1);
+        border-color: #dc3545;
+        color: #dc3545;
+    }
+
+    .grade-critical {
+        background-color: rgba(108, 117, 125, 0.1);
+        border-color: #6c757d;
+        color: #6c757d;
+    }
+
+    .score-value {
+        font-weight: bold;
+    }
+</style>

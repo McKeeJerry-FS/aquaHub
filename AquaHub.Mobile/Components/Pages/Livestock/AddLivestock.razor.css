@@ -1,0 +1,222 @@
+/* Modern Form Styling for AddLivestock */
+
+/* Card Styling */
+.livestock-card {
+  border-left-width: 4px;
+  border-left-style: solid;
+  transition: all 0.3s ease;
+}
+
+.livestock-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Section Headers */
+.section-header {
+  font-size: 0.8rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #6c757d;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.section-header i {
+  font-size: 1rem;
+}
+
+/* Form Controls */
+::deep .form-control-lg,
+::deep .form-select-lg {
+  border-radius: 0.5rem;
+  border-width: 2px;
+  padding: 0.75rem 1rem;
+  transition: all 0.2s ease;
+}
+
+::deep .form-control-lg:focus,
+::deep .form-select-lg:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.15);
+  transform: scale(1.01);
+}
+
+::deep .input-group-lg {
+  border-radius: 0.5rem;
+}
+
+::deep .input-group-text {
+  background: #f8f9fa;
+  border-width: 2px;
+  color: #667eea;
+  font-weight: 600;
+}
+
+/* Form Switches */
+::deep .form-check-input {
+  width: 3em;
+  height: 1.5em;
+  cursor: pointer;
+  border-width: 2px;
+}
+
+::deep .form-check-input:checked {
+  background-color: #667eea;
+  border-color: #667eea;
+}
+
+::deep .form-check-input:focus {
+  box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.15);
+}
+
+::deep .form-check-label {
+  cursor: pointer;
+  font-weight: 500;
+  user-select: none;
+}
+
+/* Alert Styling */
+::deep .alert-info {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border: none;
+  border-left: 4px solid #2196f3;
+}
+
+/* Button Styling */
+.btn-primary {
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.5rem 1rem rgba(102, 126, 234, 0.3) !important;
+}
+
+.btn-outline-secondary {
+  transition: all 0.3s ease;
+}
+
+.btn-outline-secondary:hover {
+  transform: translateY(-2px);
+}
+
+/* Category Select */
+.category-select {
+  font-size: 1.1rem;
+  padding: 1rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #667eea 50%),
+    linear-gradient(135deg, #667eea 50%, transparent 50%);
+  background-position:
+    calc(100% - 20px) calc(1em + 2px),
+    calc(100% - 15px) calc(1em + 2px);
+  background-size:
+    5px 5px,
+    5px 5px;
+  background-repeat: no-repeat;
+}
+
+/* Badges */
+::deep .badge {
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
+
+/* Card Headers with Gradient */
+.gradient-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+}
+
+/* Loading Spinner */
+.spinner-border {
+  border-width: 0.25rem;
+}
+
+/* Validation Messages */
+::deep .validation-message {
+  font-size: 0.875rem;
+  color: #dc3545;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+/* Range Input Styling */
+.range-separator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6c757d;
+  font-weight: 600;
+  font-size: 1.2rem;
+}
+
+/* Responsive Improvements */
+@media (max-width: 768px) {
+  ::deep .form-control-lg,
+  ::deep .form-select-lg {
+    font-size: 1rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .section-header {
+    font-size: 0.75rem;
+  }
+
+  ::deep .btn-lg {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+  }
+}
+
+/* Smooth Transitions */
+* {
+  transition:
+    border-color 0.15s ease-in-out,
+    box-shadow 0.15s ease-in-out;
+}
+
+/* Form Text Helper */
+::deep .form-text {
+  color: #6c757d;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+/* Icon Styling */
+.icon-lg {
+  font-size: 1.5rem;
+}
+
+/* Special Characteristics Grid */
+.characteristics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+/* Card Border Colors */
+.border-freshwater {
+  border-left-color: #10b981 !important;
+}
+
+.border-saltwater {
+  border-left-color: #3b82f6 !important;
+}
+
+.border-coral {
+  border-left-color: #f59e0b !important;
+}
+
+.border-plant {
+  border-left-color: #22c55e !important;
+}
+
+.border-invertebrate {
+  border-left-color: #8b5cf6 !important;
+}

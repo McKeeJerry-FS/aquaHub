@@ -1097,6 +1097,22 @@
             "rid": "win"
           }
         }
+      },
+      "AquaHub.Shared/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v10.0",
+        "dependencies": {
+          "Microsoft.AspNetCore.Identity.EntityFrameworkCore": "10.0.1",
+          "Microsoft.EntityFrameworkCore": "10.0.2",
+          "Microsoft.EntityFrameworkCore.Sqlite": "10.0.1",
+          "Npgsql.EntityFrameworkCore.PostgreSQL": "10.0.0"
+        },
+        "compile": {
+          "bin/placeholder/AquaHub.Shared.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/AquaHub.Shared.dll": {}
+        }
       }
     }
   },
@@ -3131,10 +3147,16 @@
         "system.windows.extensions.nuspec",
         "useSharedDesignerContext.txt"
       ]
+    },
+    "AquaHub.Shared/1.0.0": {
+      "type": "project",
+      "path": "../AquaHub.Shared/AquaHub.Shared.csproj",
+      "msbuildProject": "../AquaHub.Shared/AquaHub.Shared.csproj"
     }
   },
   "projectFileDependencyGroups": {
     "net10.0": [
+      "AquaHub.Shared >= 1.0.0",
       "Microsoft.AspNetCore.App.Internal.Assets >= 10.0.1",
       "Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore >= 10.0.1",
       "Microsoft.AspNetCore.Identity.EntityFrameworkCore >= 10.0.1",
@@ -3169,7 +3191,11 @@
       "frameworks": {
         "net10.0": {
           "targetAlias": "net10.0",
-          "projectReferences": {}
+          "projectReferences": {
+            "/Users/jerrymckeejr/Desktop/aquaHub/AquaHub.Shared/AquaHub.Shared.csproj": {
+              "projectPath": "/Users/jerrymckeejr/Desktop/aquaHub/AquaHub.Shared/AquaHub.Shared.csproj"
+            }
+          }
         }
       },
       "warningProperties": {

@@ -1,0 +1,360 @@
+﻿@page "/equipment/dashboard/{Id:int}"
+@using AquaHub.Shared.Models.Enums
+@using AquaHub.Shared.Services.Interfaces
+@using AquaHub.Shared.Models
+@using AquaHub.Shared.Models.ViewModels
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@inject IEquipmentService EquipmentService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize]
+
+<PageTitle>@(viewModel?.Equipment?.Brand ?? "Equipment") Dashboard</PageTitle>
+
+@if (isLoading)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="text-muted mt-3">Loading dashboard...</p>
+    </div>
+}
+else if (viewModel?.Equipment == null)
+{
+    <div class="alert alert-danger">
+        <i class="bi bi-exclamation-triangle"></i> Equipment not found.
+    </div>
+}
+else
+{
+    <div class="equipment-dashboard-container">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="display-4 mb-0">
+                <i class="@GetEquipmentIcon(viewModel.Equipment)"></i>
+                @viewModel.Equipment.Brand @viewModel.Equipment.Model
+            </h1>
+            <div class="d-flex gap-2">
+                <a href="/equipment/edit/@viewModel.Equipment.Id" class="btn btn-warning">
+                    <i class="bi bi-pencil"></i> Edit
+                </a>
+                <a href="/equipment/delete/@viewModel.Equipment.Id" class="btn btn-danger">
+                    <i class="bi bi-trash"></i> Delete
+                </a>
+                <a href="/tanks/dashboard/@viewModel.Tank?.Id" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Tank
+                </a>
+            </div>
+        </div>
+
+        <!-- Maintenance Alert -->
+        @if (viewModel.NeedsMaintenance)
+        {
+            <div class="alert alert-danger mb-4">
+                <h5 class="alert-heading">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Maintenance Overdue!
+                </h5>
+                <p class="mb-0">
+                    This equipment is overdue for maintenance. Last serviced @viewModel.DaysSinceLastMaintenance days ago.
+                    Recommended interval: @viewModel.RecommendedMaintenanceInterval days.
+                </p>
+            </div>
+        }
+        else if (viewModel.DaysSinceLastMaintenance > viewModel.RecommendedMaintenanceInterval - 7)
+        {
+            <div class="alert alert-warning mb-4">
+                <h5 class="alert-heading">
+                    <i class="bi bi-clock-history"></i> Maintenance Due Soon
+                </h5>
+                <p class="mb-0">
+                    Maintenance is due in @(viewModel.RecommendedMaintenanceInterval - viewModel.DaysSinceLastMaintenance) days.
+                </p>
+            </div>
+        }
+
+        <!-- Equipment Overview Card -->
+        <div class="card mb-4 shadow">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0">Equipment Overview</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-5">Equipment Type:</dt>
+                            <dd class="col-sm-7">@viewModel.EquipmentTypeName</dd>
+
+                            <dt class="col-sm-5">Brand:</dt>
+                            <dd class="col-sm-7">@viewModel.Equipment.Brand</dd>
+
+                            <dt class="col-sm-5">Model:</dt>
+                            <dd class="col-sm-7">@viewModel.Equipment.Model</dd>
+
+                            <dt class="col-sm-5">Installed On:</dt>
+                            <dd class="col-sm-7">@viewModel.Equipment.InstalledOn.ToShortDateString()</dd>
+
+                            <dt class="col-sm-5">Days Active:</dt>
+                            <dd class="col-sm-7">@viewModel.DaysSinceInstallation days</dd>
+
+                            <dt class="col-sm-5">Tank:</dt>
+                            <dd class="col-sm-7">
+                                <a href="/tanks/dashboard/@viewModel.Tank?.Id">@viewModel.Tank?.Name</a>
+                            </dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        @if (viewModel.Equipment is Filter filter)
+                        {
+                            <h5 class="mb-3">Filter Specifications</h5>
+                            <dl class="row mb-0">
+                                <dt class="col-sm-5">Filter Type:</dt>
+                                <dd class="col-sm-7">@filter.Type</dd>
+
+                                <dt class="col-sm-5">Flow Rate:</dt>
+                                <dd class="col-sm-7">@filter.FlowRate GPH</dd>
+
+                                @if (!string.IsNullOrEmpty(filter.Media))
+                                {
+                                    <dt class="col-sm-5">Media:</dt>
+                                    <dd class="col-sm-7">@filter.Media</dd>
+                                }
+                            </dl>
+                        }
+                        else if (viewModel.Equipment is Light light)
+                        {
+                            <h5 class="mb-3">Light Specifications</h5>
+                            <dl class="row mb-0">
+                                <dt class="col-sm-5">Wattage:</dt>
+                                <dd class="col-sm-7">@light.Wattage W</dd>
+
+                                @if (!string.IsNullOrEmpty(light.Spectrum))
+                                {
+                                    <dt class="col-sm-5">Spectrum:</dt>
+                                    <dd class="col-sm-7">@light.Spectrum</dd>
+                                }
+
+                                <dt class="col-sm-5">Dimmable:</dt>
+                                <dd class="col-sm-7">@(light.IsDimmable ? "Yes" : "No")</dd>
+
+                                @if (light.IsDimmable)
+                                {
+                                    <dt class="col-sm-5">Current Intensity:</dt>
+                                    <dd class="col-sm-7">@light.IntensityPercent%</dd>
+                                }
+
+                                @if (!string.IsNullOrEmpty(light.Schedule))
+                                {
+                                    <dt class="col-sm-5">Schedule:</dt>
+                                    <dd class="col-sm-7">@light.Schedule</dd>
+                                }
+                            </dl>
+                        }
+                        else if (viewModel.Equipment is ProteinSkimmer skimmer)
+                        {
+                            <h5 class="mb-3">Protein Skimmer Specifications</h5>
+                            <dl class="row mb-0">
+                                <dt class="col-sm-5">Capacity:</dt>
+                                <dd class="col-sm-7">@skimmer.Capacity gallons</dd>
+
+                                @if (!string.IsNullOrEmpty(skimmer.Type))
+                                {
+                                    <dt class="col-sm-5">Type:</dt>
+                                    <dd class="col-sm-7">@skimmer.Type</dd>
+                                }
+
+                                <dt class="col-sm-5">Air Intake:</dt>
+                                <dd class="col-sm-7">@skimmer.AirIntake</dd>
+
+                                <dt class="col-sm-5">Cup Fill Level:</dt>
+                                <dd class="col-sm-7">
+                                    @skimmer.CupFillLevel%
+                                    @if (skimmer.CupFillLevel > 75)
+                                    {
+                                        <span class="badge bg-warning">Needs Emptying</span>
+                                    }
+                                </dd>
+                            </dl>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Maintenance Stats -->
+        <div class="row mb-4 g-3">
+            <div class="col-md-4">
+                <div class="card text-white bg-@viewModel.MaintenanceStatusClass shadow h-100">
+                    <div class="card-body text-center p-3">
+                        <h2 class="display-6 mb-2">@viewModel.MaintenanceStatus</h2>
+                        <p class="card-text mb-0">Current Status</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-info shadow h-100">
+                    <div class="card-body text-center p-3">
+                        <h2 class="display-6 mb-2">@viewModel.DaysSinceLastMaintenance</h2>
+                        <p class="card-text mb-0">Days Since Last Service</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-secondary shadow h-100">
+                    <div class="card-body text-center p-3">
+                        <h2 class="display-6 mb-2">@viewModel.RecommendedMaintenanceInterval</h2>
+                        <p class="card-text mb-0">Recommended Interval (days)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Maintenance History -->
+        <div class="card mb-4 shadow">
+            <div class="card-header bg-warning d-flex justify-content-between align-items-center">
+                <h3 class="mb-0"><i class="bi bi-tools"></i> Related Maintenance History</h3>
+                <a href="/tanks/@viewModel.Tank?.Id/maintenance/add" class="btn btn-sm btn-dark">
+                    <i class="bi bi-plus-circle"></i> Log Maintenance
+                </a>
+            </div>
+            <div class="card-body">
+                @if (viewModel.RelatedMaintenanceLogs.Any())
+                {
+                    <div class="list-group">
+                        @foreach (var log in viewModel.RelatedMaintenanceLogs)
+                        {
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">@log.Type</h6>
+                                    <small>@log.Timestamp.ToString("MMM dd, yyyy")</small>
+                                </div>
+                                @if (log.WaterChangePercent.HasValue)
+                                {
+                                    <p class="mb-1">Water Change: @log.WaterChangePercent%</p>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(log.Notes))
+                                {
+                                    <p class="mb-0 small text-muted">@log.Notes</p>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info mb-0">
+                        <i class="bi bi-info-circle"></i> No maintenance logged for this equipment yet.
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Maintenance Recommendations -->
+        <div class="card mb-4 shadow">
+            <div class="card-header bg-info text-white">
+                <h3 class="mb-0"><i class="bi bi-lightbulb"></i> Maintenance Tips</h3>
+            </div>
+            <div class="card-body">
+                @if (viewModel.Equipment is Filter)
+                {
+                    var filterEquipment = (Filter)viewModel.Equipment;
+                    <h5>Filter Maintenance Recommendations:</h5>
+                    <ul>
+                        <li>Clean or replace filter media every @viewModel.RecommendedMaintenanceInterval days</li>
+                        <li>Check for proper water flow regularly</li>
+                        <li>Inspect impeller for debris or damage</li>
+                        @if (filterEquipment.Type == FilterType.Canister)
+                        {
+                            <li>Check O-rings and seals for wear</li>
+                            <li>Clean inlet and outlet tubes</li>
+                        }
+                        @if (filterEquipment.Type == FilterType.HangOnBack)
+                        {
+                            <li>Clean intake tube weekly</li>
+                            <li>Replace filter cartridges as needed</li>
+                        }
+                    </ul>
+                }
+                else if (viewModel.Equipment is Light light)
+                {
+                    <h5>Light Maintenance Recommendations:</h5>
+                    <ul>
+                        <li>Clean light fixture and remove salt creep/dust every @viewModel.RecommendedMaintenanceInterval days
+                        </li>
+                        <li>Check for proper operation of all LED channels</li>
+                        <li>Inspect power cord for damage</li>
+                        @if (light.IsDimmable)
+                        {
+                            <li>Test dimming functionality periodically</li>
+                        }
+                        <li>Replace bulbs/LEDs as manufacturer recommends (typically 12-24 months)</li>
+                    </ul>
+                }
+                else if (viewModel.Equipment is ProteinSkimmer skimmer)
+                {
+                    <h5>Protein Skimmer Maintenance Recommendations:</h5>
+                    <ul>
+                        <li>Empty collection cup every @viewModel.RecommendedMaintenanceInterval days or when 75% full</li>
+                        <li>Clean bubble plate weekly</li>
+                        <li>Inspect and clean venturi/air intake</li>
+                        <li>Check pump for proper operation</li>
+                        <li>Deep clean entire unit monthly</li>
+                    </ul>
+                }
+                else
+                {
+                    <h5>General Equipment Maintenance:</h5>
+                    <ul>
+                        <li>Inspect equipment regularly for wear and damage</li>
+                        <li>Clean and service every @viewModel.RecommendedMaintenanceInterval days</li>
+                        <li>Keep manufacturer documentation accessible</li>
+                        <li>Replace worn parts promptly</li>
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private EquipmentDashboardViewModel? viewModel;
+    private bool isLoading = true;
+    private string? userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId != null)
+            {
+                await LoadDashboard();
+            }
+        }
+        isLoading = false;
+    }
+
+    private async Task LoadDashboard()
+    {
+        if (userId == null) return;
+        viewModel = await EquipmentService.GetEquipmentDashboardAsync(Id, userId);
+    }
+
+    private string GetEquipmentIcon(Equipment equipment)
+    {
+        return equipment switch
+        {
+            Filter => "bi bi-funnel-fill",
+            Light => "bi bi-lightbulb-fill",
+            ProteinSkimmer => "bi bi-recycle",
+            _ => "bi bi-gear-fill"
+        };
+    }
+}

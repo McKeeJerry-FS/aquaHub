@@ -1,0 +1,420 @@
+@page "/tanks/{TankId:int}/watertests/add"
+@using AquaHub.Shared.Services.Interfaces
+@using AquaHub.Shared.Models
+@using AquaHub.Shared.Models.Enums
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Components
+@inject IWaterTestService WaterTestService
+@inject ITankService TankService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize]
+
+<PageTitle>Add Water Test</PageTitle>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10 col-xl-9">
+            <!-- Header Card -->
+            <div class="card shadow-lg border-0 mb-4">
+                <div class="card-header border-0 bg-gradient text-dark py-4"
+                    style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-droplet-half fs-1 opacity-75"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h2 class="mb-1 fw-bold">Record Water Parameters</h2>
+                            <p class="mb-0 opacity-90">
+                                <i class="bi bi-droplet-fill me-1"></i>
+                                @tank?.Name
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body p-4 p-md-5">
+                    @if (isLoading)
+                    {
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="text-muted">Loading tank information...</p>
+                        </div>
+                    }
+                    else if (tank == null)
+                    {
+                        <div class="alert alert-danger d-flex align-items-center" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+                            <div>
+                                <h5 class="alert-heading mb-1">Tank Not Found</h5>
+                                <p class="mb-0">The requested tank could not be found.</p>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <EditForm Model="waterTest" OnValidSubmit="HandleSubmit">
+                            <DataAnnotationsValidator />
+
+                            @if (!string.IsNullOrEmpty(errorMessage))
+                            {
+                                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                    @errorMessage
+                                    <button type="button" class="btn-close"
+                                        @onclick="@(() => errorMessage = string.Empty)"></button>
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrEmpty(successMessage))
+                            {
+                                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                    <i class="bi bi-check-circle-fill me-2"></i>
+                                    @successMessage
+                                    <button type="button" class="btn-close"
+                                        @onclick="@(() => successMessage = string.Empty)"></button>
+                                </div>
+                            }
+
+                            <!-- Common Parameters Section -->
+                            <div class="card border-0 shadow-sm mb-4" style="border-left: 4px solid #4facfe !important;">
+                                <div class="card-header bg-white border-0 py-3">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-water text-dark fs-4 me-2"></i>
+                                        <h5 class="mb-0 fw-bold">Common Parameters</h5>
+                                    </div>
+                                    <small class="text-muted">Basic water quality measurements for all tank types</small>
+                                </div>
+                                <div class="card-body p-4">
+                                    <div class="row g-4">
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-semibold">
+                                                <i class="bi bi-thermometer-half text-danger me-1"></i>
+                                                Temperature (°F)
+                                            </label>
+                                            <InputNumber @bind-Value="waterTest.Temperature"
+                                                class="form-control form-control-lg" placeholder="e.g., 78.5" step="0.1" />
+                                            <div class="form-text">
+                                                <i class="bi bi-info-circle me-1"></i>
+                                                Typical range: 72-82°F
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-semibold">
+                                                <i class="bi bi-droplet text-info me-1"></i>
+                                                pH Level
+                                            </label>
+                                            <InputNumber @bind-Value="waterTest.PH" class="form-control form-control-lg"
+                                                placeholder="e.g., 7.2" step="0.1" />
+                                            <div class="form-text">
+                                                <i class="bi bi-info-circle me-1"></i>
+                                                Freshwater: 6.5-8.0, Saltwater: 8.0-8.4
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-semibold">
+                                                <i class="bi bi-exclamation-triangle text-warning me-1"></i>
+                                                Ammonia (ppm)
+                                            </label>
+                                            <InputNumber @bind-Value="waterTest.Ammonia"
+                                                class="form-control form-control-lg" placeholder="e.g., 0.0" step="0.01" />
+                                            <div class="form-text">Should be 0 ppm</div>
+                                        </div>
+
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-semibold">
+                                                <i class="bi bi-exclamation-triangle text-warning me-1"></i>
+                                                Nitrite (ppm)
+                                            </label>
+                                            <InputNumber @bind-Value="waterTest.Nitrite"
+                                                class="form-control form-control-lg" placeholder="e.g., 0.0" step="0.01" />
+                                            <div class="form-text">Should be 0 ppm</div>
+                                        </div>
+
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-semibold">
+                                                <i class="bi bi-check-circle text-success me-1"></i>
+                                                Nitrate (ppm)
+                                            </label>
+                                            <InputNumber @bind-Value="waterTest.Nitrate"
+                                                class="form-control form-control-lg" placeholder="e.g., 10" step="1" />
+                                            <div class="form-text">Below 20 ppm recommended</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Freshwater/Planted Parameters Section -->
+                            @if (tank.Type == AquariumType.Freshwater || tank.Type == AquariumType.Planted || tank.Type ==
+                                                    AquariumType.Brackish)
+                            {
+                                <div class="card border-0 shadow-sm mb-4" style="border-left: 4px solid #66bb6a !important;">
+                                    <div class="card-header bg-light border-0 py-3">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-moisture text-success fs-4 me-2"></i>
+                                            <h5 class="mb-0 fw-bold">Freshwater Parameters</h5>
+                                        </div>
+                                        <small class="text-muted">Specific to freshwater and planted tanks</small>
+                                    </div>
+                                    <div class="card-body p-4">
+                                        <div class="row g-4">
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-semibold">
+                                                    <i class="bi bi-droplet text-primary me-1"></i>
+                                                    GH (General Hardness)
+                                                </label>
+                                                <InputNumber @bind-Value="waterTest.GH" class="form-control form-control-lg"
+                                                    placeholder="e.g., 8" step="0.5" />
+                                                <div class="form-text">In degrees (°dH)</div>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-semibold">
+                                                    <i class="bi bi-droplet text-primary me-1"></i>
+                                                    KH (Carbonate Hardness)
+                                                </label>
+                                                <InputNumber @bind-Value="waterTest.KH" class="form-control form-control-lg"
+                                                    placeholder="e.g., 4" step="0.5" />
+                                                <div class="form-text">In degrees (°dH)</div>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-semibold">
+                                                    <i class="bi bi-speedometer text-info me-1"></i>
+                                                    TDS (Total Dissolved Solids)
+                                                </label>
+                                                <InputNumber @bind-Value="waterTest.TDS" class="form-control form-control-lg"
+                                                    placeholder="e.g., 250" step="10" />
+                                                <div class="form-text">In parts per million (ppm)</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+
+                            <!-- Saltwater/Reef Parameters Section -->
+                            @if (tank.Type == AquariumType.Saltwater || tank.Type == AquariumType.Reef || tank.Type ==
+                                                    AquariumType.Brackish)
+                            {
+                                <div class="card border-0 shadow-sm mb-4" style="border-left: 4px solid #42a5f5 !important;">
+                                    <div class="card-header bg-white border-0 py-3">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-tsunami text-primary fs-4 me-2"></i>
+                                            <h5 class="mb-0 fw-bold">Saltwater/Reef Parameters</h5>
+                                        </div>
+                                        <small class="text-muted">Specific to saltwater and reef tanks</small>
+                                    </div>
+                                    <div class="card-body p-4">
+                                        <div class="row g-4">
+                                            <div class="col-md-6">
+                                                <label class="form-label fw-semibold">
+                                                    <i class="bi bi-water text-info me-1"></i>
+                                                    Salinity (ppt)
+                                                </label>
+                                                <InputNumber @bind-Value="waterTest.Salinity"
+                                                    class="form-control form-control-lg" placeholder="e.g., 35" step="0.5" />
+                                                <div class="form-text">
+                                                    <i class="bi bi-info-circle me-1"></i>
+                                                    Typical: 30-35 ppt (1.020-1.026 SG)
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-6">
+                                                <label class="form-label fw-semibold">
+                                                    <i class="bi bi-gem text-primary me-1"></i>
+                                                    Alkalinity (dKH)
+                                                </label>
+                                                <InputNumber @bind-Value="waterTest.Alkalinity"
+                                                    class="form-control form-control-lg" placeholder="e.g., 8" step="0.5" />
+                                                <div class="form-text">
+                                                    <i class="bi bi-info-circle me-1"></i>
+                                                    Reef: 8-12 dKH
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-semibold">
+                                                    <i class="bi bi-shield-check text-success me-1"></i>
+                                                    Calcium (ppm)
+                                                </label>
+                                                <InputNumber @bind-Value="waterTest.Calcium"
+                                                    class="form-control form-control-lg" placeholder="e.g., 420" step="10" />
+                                                <div class="form-text">Reef: 380-450 ppm</div>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-semibold">
+                                                    <i class="bi bi-lightning text-warning me-1"></i>
+                                                    Magnesium (ppm)
+                                                </label>
+                                                <InputNumber @bind-Value="waterTest.Magnesium"
+                                                    class="form-control form-control-lg" placeholder="e.g., 1350" step="50" />
+                                                <div class="form-text">Reef: 1250-1400 ppm</div>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-semibold">
+                                                    <i class="bi bi-exclamation-circle text-danger me-1"></i>
+                                                    Phosphate (ppm)
+                                                </label>
+                                                <InputNumber @bind-Value="waterTest.Phosphate"
+                                                    class="form-control form-control-lg" placeholder="e.g., 0.03" step="0.01" />
+                                                <div class="form-text">Should be below 0.1 ppm</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+
+                            <!-- Action Buttons -->
+                            <div class="d-flex justify-content-end gap-3 pt-3">
+                                <button type="button" class="btn btn-lg btn-outline-secondary px-4" @onclick="Cancel"
+                                    disabled="@isSubmitting">
+                                    <i class="bi bi-x-circle me-2"></i>
+                                    Cancel
+                                </button>
+                                <button type="submit" class="btn btn-lg btn-primary px-5" disabled="@isSubmitting">
+                                    @if (isSubmitting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                        <span>Saving...</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-save me-2"></i>
+                                        <span>Record Water Test</span>
+                                    }
+                                </button>
+                            </div>
+                        </EditForm>
+                    }
+                </div>
+            </div>
+
+            <!-- Help Card -->
+            <div class="card border-info shadow-sm">
+                <div class="card-header bg-info bg-opacity-10 border-info">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-info-circle-fill text-info fs-5 me-2"></i>
+                        <h6 class="mb-0 fw-bold text-info">Testing Tips</h6>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0 small">
+                        <li>Test water parameters regularly (at least weekly) to maintain stable conditions</li>
+                        <li>Fill in only the parameters you test - leave others blank</li>
+                        <li>Keep test results recorded to track trends over time</li>
+                        <li>Take action immediately if ammonia or nitrite are detected</li>
+                        <li>For saltwater tanks, maintain stable salinity and reef chemistry for coral health</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int TankId { get; set; }
+
+    private Tank? tank;
+    private WaterTest waterTest = new();
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    private string userId = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user?.Identity?.IsAuthenticated == true)
+            {
+                userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    tank = await TankService.GetTankByIdAsync(TankId, userId);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading tank: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        try
+        {
+            isSubmitting = true;
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+
+            // Validate that at least one parameter is filled
+            if (!HasAnyParameterFilled())
+            {
+                errorMessage = "Please enter at least one water parameter measurement.";
+                return;
+            }
+
+            await WaterTestService.CreateWaterTestAsync(waterTest, TankId, userId);
+
+            successMessage = "Water test recorded successfully!";
+
+            // Redirect after a short delay to show success message
+            await Task.Delay(1500);
+            Navigation.NavigateTo($"/tanks/dashboard/{TankId}");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            errorMessage = "You don't have permission to add water tests to this tank.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error saving water test: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private bool HasAnyParameterFilled()
+    {
+        return waterTest.PH.HasValue ||
+        waterTest.Temperature.HasValue ||
+        waterTest.Ammonia.HasValue ||
+        waterTest.Nitrite.HasValue ||
+        waterTest.Nitrate.HasValue ||
+        waterTest.GH.HasValue ||
+        waterTest.KH.HasValue ||
+        waterTest.TDS.HasValue ||
+        waterTest.Salinity.HasValue ||
+        waterTest.Alkalinity.HasValue ||
+        waterTest.Calcium.HasValue ||
+        waterTest.Magnesium.HasValue ||
+        waterTest.Phosphate.HasValue;
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo($"/tanks/dashboard/{TankId}");
+    }
+}

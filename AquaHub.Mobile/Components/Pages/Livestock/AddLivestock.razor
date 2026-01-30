@@ -1,0 +1,1663 @@
+﻿@page "/tanks/{TankId:int}/livestock/add"
+@using AquaHub.Shared.Services.Interfaces
+@using AquaHub.Shared.Models
+@using AquaHub.Shared.Models.Enums
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Components
+@inject ILivestockService LivestockService
+@inject ITankService TankService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize]
+
+<PageTitle>Add Livestock</PageTitle>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-11 col-xl-10">
+            <!-- Header Card -->
+            <div class="card shadow-lg border-0 mb-4">
+                <div class="card-header border-0 bg-gradient text-white py-4"
+                    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-plus-circle-fill fs-1 opacity-75"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h2 class="mb-1 fw-bold">Add Livestock</h2>
+                            <p class="mb-0 opacity-90">
+                                <i class="bi bi-droplet-fill me-1"></i>
+                                @tank?.Name
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body p-4 p-md-5">
+                    @if (isLoading)
+                    {
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="text-muted">Loading tank information...</p>
+                        </div>
+                    }
+                    else if (tank == null)
+                    {
+                        <div class="alert alert-danger d-flex align-items-center" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+                            <div>
+                                <h5 class="alert-heading mb-1">Tank Not Found</h5>
+                                <p class="mb-0">The requested tank could not be found.</p>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <EditForm Model="commonModel" OnValidSubmit="HandleSubmit">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="alert alert-danger" />
+
+                            <!-- Livestock Category Selection -->
+                            <div class="mb-5">
+                                <div class="d-flex align-items-center mb-3">
+                                    <i class="bi bi-ui-radios-grid text-primary fs-4 me-2"></i>
+                                    <label class="form-label fw-bold fs-5 mb-0">Select Livestock Category *</label>
+                                </div>
+                                <select class="form-select form-select-lg shadow-sm" @bind="selectedCategory"
+                                    style="border-width: 2px; border-color: #e0e0e0;">
+                                    <option value="">-- Choose a category --</option>
+                                    <option value="FreshwaterFish">🐟 Freshwater Fish</option>
+                                    <option value="SaltwaterFish">🐠 Saltwater Fish</option>
+                                    <option value="FreshwaterInvertebrate">🦐 Freshwater Invertebrate</option>
+                                    <option value="SaltwaterInvertebrate">🦞 Saltwater Invertebrate</option>
+                                    <option value="Coral">🪸 Coral</option>
+                                    <option value="Plant">🌱 Plant</option>
+                                </select>
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Choose the type of livestock you want to add to this tank
+                                </div>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(selectedCategory))
+                            {
+                                <!-- Common Fields -->
+                                <div class="card border-0 shadow-sm mb-4" style="border-left: 4px solid #667eea !important;">
+                                    <div class="card-header bg-white border-0 py-3">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-card-text text-primary fs-4 me-2"></i>
+                                            <h5 class="mb-0 fw-bold">Basic Information</h5>
+                                        </div>
+                                    </div>
+                                    <div class="card-body p-4">
+                                        <div class="row g-4">
+                                            <div class="col-md-6">
+                                                <label class="form-label fw-semibold">
+                                                    <i class="bi bi-tag-fill text-primary me-2"></i>Name *
+                                                </label>
+                                                <InputText class="form-control form-control-lg" @bind-Value="commonModel.Name"
+                                                    placeholder="e.g., Nemo, Blue Tang" />
+                                                <ValidationMessage For="@(() => commonModel.Name)"
+                                                    class="text-danger small mt-1" />
+                                            </div>
+
+                                            <div class="col-md-6">
+                                                <label class="form-label fw-semibold">
+                                                    <i class="bi bi-search text-primary me-2"></i>Species *
+                                                </label>
+                                                <InputText class="form-control form-control-lg"
+                                                    @bind-Value="commonModel.Species"
+                                                    placeholder="e.g., Pterophyllum scalare" />
+                                                <ValidationMessage For="@(() => commonModel.Species)"
+                                                    class="text-danger small mt-1" />
+                                            </div>
+
+                                            <div class="col-md-6">
+                                                <label class="form-label fw-semibold">
+                                                    <i class="bi bi-calendar-plus text-primary me-2"></i>Date Added *
+                                                </label>
+                                                <InputDate class="form-control form-control-lg"
+                                                    @bind-Value="commonModel.AddedOn" />
+                                                <ValidationMessage For="@(() => commonModel.AddedOn)"
+                                                    class="text-danger small mt-1" />
+                                            </div>
+
+                                            <div class="col-12">
+                                                <label class="form-label fw-semibold">
+                                                    <i class="bi bi-pencil-square text-primary me-2"></i>Notes
+                                                </label>
+                                                <InputTextArea class="form-control" @bind-Value="commonModel.Notes" rows="4"
+                                                    placeholder="Add any special observations, health notes, or care reminders..." />
+                                                <div class="form-text">
+                                                    <i class="bi bi-lightbulb me-1"></i>
+                                                    Optional: Document any special characteristics or care requirements
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Type-Specific Fields -->
+                                @if (selectedCategory == "FreshwaterFish")
+                                {
+                                    @FreshwaterFishForm()
+                                }
+                                else if (selectedCategory == "SaltwaterFish")
+                                {
+                                    @SaltwaterFishForm()
+                                }
+                                else if (selectedCategory == "FreshwaterInvertebrate")
+                                {
+                                    @FreshwaterInvertebrateForm()
+                                }
+                                else if (selectedCategory == "SaltwaterInvertebrate")
+                                {
+                                    @SaltwaterInvertebrateForm()
+                                }
+                                else if (selectedCategory == "Coral")
+                                {
+                                    @CoralForm()
+                                }
+                                else if (selectedCategory == "Plant")
+                                {
+                                    @PlantForm()
+                                }
+                            }
+
+                            <div class="d-flex gap-3 mt-5 pt-4 border-top">
+                                <button type="submit" class="btn btn-lg btn-primary px-5 shadow-sm"
+                                    disabled="@(string.IsNullOrEmpty(selectedCategory))"
+                                    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                                    <i class="bi bi-check-circle-fill me-2"></i>Add Livestock
+                                </button>
+                                <a href="/tanks/dashboard/@TankId" class="btn btn-lg btn-outline-secondary px-4">
+                                    <i class="bi bi-x-circle me-2"></i>Cancel
+                                </a>
+                            </div>
+                        </EditForm>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int TankId { get; set; }
+
+    private Tank? tank;
+    private bool isLoading = true;
+    private string? userId;
+    private string selectedCategory = "";
+
+    private CommonLivestockModel commonModel = new();
+    private FreshwaterFishModel freshwaterFishModel = new();
+    private SaltwaterFishModel saltwaterFishModel = new();
+    private FreshwaterInvertebrateModel freshwaterInvertModel = new();
+    private SaltwaterInvertebrateModel saltwaterInvertModel = new();
+    private CoralModel coralModel = new();
+    private PlantModel plantModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId != null)
+            {
+                tank = await TankService.GetTankByIdAsync(TankId, userId);
+                commonModel.AddedOn = DateTime.Now;
+            }
+        }
+        isLoading = false;
+    }
+
+    private RenderFragment FreshwaterFishForm() => __builder =>
+    {
+        <div class="card border-0 shadow-sm mb-4" style="border-left: 4px solid #10b981 !important;">
+            <div class="card-header bg-white border-0 py-3">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-water text-success fs-4 me-2"></i>
+                    <h5 class="mb-0 fw-bold">Freshwater Fish Details</h5>
+                    <span class="badge bg-success ms-auto">Freshwater</span>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <!-- Type & Care -->
+                <div class="mb-4">
+                    <h6 class="text-uppercase text-muted mb-3 fw-bold" style="font-size: 0.8rem; letter-spacing: 1px;">
+                        <i class="bi bi-info-circle-fill me-1"></i>Classification & Care
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Fish Type *</label>
+                            <InputSelect class="form-select form-select-lg" @bind-Value="freshwaterFishModel.FishType">
+                                <option value="">-- Select Type --</option>
+                                @foreach (var type in Enum.GetValues<FreshwaterFishType>())
+                                {
+                                    <option value="@type">@type</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Care Level</label>
+                            <InputText class="form-control form-control-lg" @bind-Value="freshwaterFishModel.CareLevel"
+                                placeholder="e.g., Beginner, Intermediate, Advanced" />
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Physical Characteristics -->
+                <div class="mb-4">
+                    <h6 class="text-uppercase text-muted mb-3 fw-bold" style="font-size: 0.8rem; letter-spacing: 1px;">
+                        <i class="bi bi-rulers me-1"></i>Physical Characteristics
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Adult Size (inches)</label>
+                            <div class="input-group input-group-lg">
+                                <InputNumber class="form-control" @bind-Value="freshwaterFishModel.AdultSize" />
+                                <span class="input-group-text"><i class="bi bi-rulers"></i></span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Coloration</label>
+                            <InputText class="form-control form-control-lg" @bind-Value="freshwaterFishModel.Coloration" />
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Body Shape</label>
+                            <InputText class="form-control form-control-lg" @bind-Value="freshwaterFishModel.BodyShape" />
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Behavior & Temperament -->
+                <div class="mb-4">
+                    <h6 class="text-uppercase text-muted mb-3 fw-bold" style="font-size: 0.8rem; letter-spacing: 1px;">
+                        <i class="bi bi-heart-pulse me-1"></i>Behavior & Temperament
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Temperament</label>
+                            <InputText class="form-control form-control-lg" @bind-Value="freshwaterFishModel.Temperament"
+                                placeholder="e.g., Peaceful, Semi-aggressive" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Activity Level</label>
+                            <InputText class="form-control form-control-lg" @bind-Value="freshwaterFishModel.ActivityLevel"
+                                placeholder="e.g., Low, Moderate, High" />
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Tank Requirements -->
+                <div class="mb-4">
+                    <h6 class="section-header">
+                        <i class="bi bi-house-fill me-2"></i>Tank & Environment
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Min Tank Size (gallons)</label>
+                            <div class="input-group input-group-lg">
+                                <InputNumber class="form-control" @bind-Value="freshwaterFishModel.MinTankSize" />
+                                <span class="input-group-text">gal</span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Swimming Region</label>
+                            <InputText class="form-control form-control-lg" @bind-Value="freshwaterFishModel.SwimmingRegion"
+                                placeholder="e.g., Top, Middle, Bottom" />
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Diet</label>
+                            <InputText class="form-control form-control-lg" @bind-Value="freshwaterFishModel.Diet"
+                                placeholder="e.g., Omnivore" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Water Parameters -->
+                <div class="mb-4">
+                    <h6 class="section-header">
+                        <i class="bi bi-droplet-fill me-2"></i>Water Parameters
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Temperature Range (°F)</label>
+                            <div class="row g-2">
+                                <div class="col">
+                                    <InputNumber class="form-control form-control-lg"
+                                        @bind-Value="freshwaterFishModel.OptimalTemperatureMin" placeholder="Min" />
+                                </div>
+                                <div class="col-auto d-flex align-items-center range-separator">-</div>
+                                <div class="col">
+                                    <InputNumber class="form-control form-control-lg"
+                                        @bind-Value="freshwaterFishModel.OptimalTemperatureMax" placeholder="Max" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">pH Range</label>
+                            <InputText class="form-control form-control-lg" @bind-Value="freshwaterFishModel.pHRange"
+                                placeholder="e.g., 6.5-7.5" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Hardness Range</label>
+                            <InputText class="form-control form-control-lg" @bind-Value="freshwaterFishModel.HardnessRange"
+                                placeholder="e.g., 5-15 dGH" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Preferred Water Flow</label>
+                            <InputText class="form-control form-control-lg" @bind-Value="freshwaterFishModel.PreferredWaterFlow"
+                                placeholder="e.g., Moderate" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feeding -->
+                <div class="mb-4">
+                    <h6 class="section-header">
+                        <i class="bi bi-egg-fried me-2"></i>Feeding Information
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Food Types</label>
+                            <InputText class="form-control form-control-lg" @bind-Value="freshwaterFishModel.FoodTypes"
+                                placeholder="e.g., Flakes, pellets" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Feeding Frequency</label>
+                            <InputText class="form-control form-control-lg" @bind-Value="freshwaterFishModel.FeedingFrequency"
+                                placeholder="e.g., 2x daily" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Special Characteristics -->
+                <div>
+                    <h6 class="section-header">
+                        <i class="bi bi-stars me-2"></i>Special Characteristics
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-md-4 col-lg-3">
+                            <div class="form-check form-switch">
+                                <InputCheckbox class="form-check-input" @bind-Value="freshwaterFishModel.HasLongFins"
+                                    id="hasLongFins" />
+                                <label class="form-check-label" for="hasLongFins">Has Long Fins</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-lg-3">
+                            <div class="form-check form-switch">
+                                <InputCheckbox class="form-check-input" @bind-Value="freshwaterFishModel.IsSchooling"
+                                    id="isSchooling" />
+                                <label class="form-check-label" for="isSchooling">Schooling Fish</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-lg-3">
+                            <div class="form-check form-switch">
+                                <InputCheckbox class="form-check-input" @bind-Value="freshwaterFishModel.IsNocturnal"
+                                    id="isNocturnal" />
+                                <label class="form-check-label" for="isNocturnal">Nocturnal</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-lg-3">
+                            <div class="form-check form-switch">
+                                <InputCheckbox class="form-check-input" @bind-Value="freshwaterFishModel.IsBottomFeeder"
+                                    id="isBottomFeeder" />
+                                <label class="form-check-label" for="isBottomFeeder">Bottom Feeder</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-lg-3">
+                            <div class="form-check form-switch">
+                                <InputCheckbox class="form-check-input" @bind-Value="freshwaterFishModel.RequiresPlants"
+                                    id="requiresPlants" />
+                                <label class="form-check-label" for="requiresPlants">Requires Plants</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-lg-3">
+                            <div class="form-check form-switch">
+                                <InputCheckbox class="form-check-input" @bind-Value="freshwaterFishModel.RequiresHidingSpots"
+                                    id="requiresHiding" />
+                                <label class="form-check-label" for="requiresHiding">Needs Hiding Spots</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-lg-3">
+                            <div class="form-check form-switch">
+                                <InputCheckbox class="form-check-input" @bind-Value="freshwaterFishModel.IsJumper"
+                                    id="isJumper" />
+                                <label class="form-check-label" for="isJumper">Is Jumper</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @if (freshwaterFishModel.IsSchooling)
+                {
+                    <div class="alert alert-info mt-4" role="alert">
+                        <div class="row g-3 align-items-center">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold mb-1">Recommended School Size</label>
+                                <InputNumber class="form-control form-control-lg"
+                                    @bind-Value="freshwaterFishModel.RecommendedSchoolSize" />
+                            </div>
+                            <div class="col-md-6">
+                                <small class="text-muted">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    This fish should be kept in a school for optimal health.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    };
+
+    private RenderFragment SaltwaterFishForm() => __builder =>
+    {
+        <div class="card border-0 shadow-sm mb-4 livestock-card border-saltwater">
+            <div class="card-header bg-white border-0 py-3">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-tsunami text-primary fs-4 me-2"></i>
+                    <h5 class="mb-0 fw-bold">Saltwater Fish Details</h5>
+                    <span class="badge bg-primary ms-auto">Saltwater</span>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <!-- Type & Care -->
+                <div class="mb-4">
+                    <h6 class="section-header">
+                        <i class="bi bi-info-circle-fill me-2"></i>Classification & Care
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Fish Type *</label>
+                            <InputSelect class="form-select form-select-lg" @bind-Value="saltwaterFishModel.FishType">
+                                <option value="">-- Select Type --</option>
+                                @foreach (var type in Enum.GetValues<SaltwaterFishType>())
+                                {
+                                    <option value="@type">@type</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Care Level</label>
+                            <InputText class="form-control form-control-lg" @bind-Value="saltwaterFishModel.CareLevel"
+                                placeholder="e.g., Beginner, Intermediate" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Physical Characteristics -->
+                <div class="mb-4">
+                    <h6 class="section-header">
+                        <i class="bi bi-rulers me-2"></i>Physical Characteristics
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Adult Size (inches)</label>
+                            <div class="input-group input-group-lg">
+                                <InputNumber class="form-control" @bind-Value="saltwaterFishModel.AdultSize" />
+                                <span class="input-group-text"><i class="bi bi-rulers"></i></span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Coloration</label>
+                            <InputText class="form-control form-control-lg" @bind-Value="saltwaterFishModel.Coloration" />
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Body Shape</label>
+                            <InputText class="form-control form-control-lg" @bind-Value="saltwaterFishModel.BodyShape" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Behavior & Temperament -->
+                <div class="mb-4">
+                    <h6 class="section-header">
+                        <i class="bi bi-heart-pulse me-2"></i>Behavior & Temperament
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Temperament</label>
+                            <InputText class="form-control form-control-lg" @bind-Value="saltwaterFishModel.Temperament"
+                                placeholder="e.g., Peaceful, Semi-aggressive" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Activity Level</label>
+                            <InputText class="form-control form-control-lg" @bind-Value="saltwaterFishModel.ActivityLevel"
+                                placeholder="e.g., Low, Moderate, High" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tank Requirements -->
+                <div class="mb-4">
+                    <h6 class="section-header">
+                        <i class="bi bi-house-fill me-2"></i>Tank & Environment
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Min Tank Size (gallons)</label>
+                            <div class="input-group input-group-lg">
+                                <InputNumber class="form-control" @bind-Value="saltwaterFishModel.MinTankSize" />
+                                <span class="input-group-text">gal</span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Swimming Region</label>
+                            <InputText class="form-control form-control-lg" @bind-Value="saltwaterFishModel.SwimmingRegion"
+                                placeholder="e.g., Top, Middle, Bottom" />
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Diet</label>
+                            <InputText class="form-control form-control-lg" @bind-Value="saltwaterFishModel.Diet"
+                                placeholder="e.g., Omnivore, Carnivore" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Water Parameters -->
+                <div class="mb-4">
+                    <h6 class="section-header">
+                        <i class="bi bi-droplet-fill me-2"></i>Water Parameters
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Temperature Range (°F)</label>
+                            <div class="row g-2">
+                                <div class="col">
+                                    <InputNumber class="form-control form-control-lg"
+                                        @bind-Value="saltwaterFishModel.OptimalTemperatureMin" placeholder="Min" />
+                                </div>
+                                <div class="col-auto d-flex align-items-center range-separator">-</div>
+                                <div class="col">
+                                    <InputNumber class="form-control form-control-lg"
+                                        @bind-Value="saltwaterFishModel.OptimalTemperatureMax" placeholder="Max" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Salinity Range (SG)</label>
+                            <div class="row g-2">
+                                <div class="col">
+                                    <InputNumber class="form-control form-control-lg"
+                                        @bind-Value="saltwaterFishModel.OptimalSalinityMin" placeholder="Min" />
+                                </div>
+                                <div class="col-auto d-flex align-items-center range-separator">-</div>
+                                <div class="col">
+                                    <InputNumber class="form-control form-control-lg"
+                                        @bind-Value="saltwaterFishModel.OptimalSalinityMax" placeholder="Max" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">pH Range</label>
+                            <InputText class="form-control form-control-lg" @bind-Value="saltwaterFishModel.pHRange"
+                                placeholder="e.g., 8.1-8.4" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feeding -->
+                <div class="mb-4">
+                    <h6 class="section-header">
+                        <i class="bi bi-egg-fried me-2"></i>Feeding Information
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Food Types</label>
+                            <InputText class="form-control form-control-lg" @bind-Value="saltwaterFishModel.FoodTypes"
+                                placeholder="e.g., Pellets, frozen, live" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Feeding Frequency</label>
+                            <InputText class="form-control form-control-lg" @bind-Value="saltwaterFishModel.FeedingFrequency"
+                                placeholder="e.g., 2x daily" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Feeding Behavior</label>
+                            <InputText class="form-control form-control-lg" @bind-Value="saltwaterFishModel.FeedingBehavior" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Special Characteristics -->
+                <div>
+                    <h6 class="section-header">
+                        <i class="bi bi-stars me-2"></i>Special Characteristics
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-md-4 col-lg-3">
+                            <div class="form-check form-switch">
+                                <InputCheckbox class="form-check-input" @bind-Value="saltwaterFishModel.IsReefSafe"
+                                    id="isReefSafe" />
+                                <label class="form-check-label" for="isReefSafe">Reef Safe</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-lg-3">
+                            <div class="form-check form-switch">
+                                <InputCheckbox class="form-check-input" @bind-Value="saltwaterFishModel.IsSchooling"
+                                    id="swIsSchooling" />
+                                <label class="form-check-label" for="swIsSchooling">Schooling Fish</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-lg-3">
+                            <div class="form-check form-switch">
+                                <InputCheckbox class="form-check-input" @bind-Value="saltwaterFishModel.RequiresLiveRock"
+                                    id="requiresLiveRock" />
+                                <label class="form-check-label" for="requiresLiveRock">Requires Live Rock</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-lg-3">
+                            <div class="form-check form-switch">
+                                <InputCheckbox class="form-check-input" @bind-Value="saltwaterFishModel.RequiresHidingSpots"
+                                    id="swRequiresHiding" />
+                                <label class="form-check-label" for="swRequiresHiding">Needs Hiding Spots</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-lg-3">
+                            <div class="form-check form-switch">
+                                <InputCheckbox class="form-check-input" @bind-Value="saltwaterFishModel.IsJumper"
+                                    id="swIsJumper" />
+                                <label class="form-check-label" for="swIsJumper">Is Jumper</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-lg-3">
+                            <div class="form-check form-switch">
+                                <InputCheckbox class="form-check-input" @bind-Value="saltwaterFishModel.NipsAtCorals"
+                                    id="nipsAtCorals" />
+                                <label class="form-check-label" for="nipsAtCorals">Nips at Corals</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-lg-3">
+                            <div class="form-check form-switch">
+                                <InputCheckbox class="form-check-input" @bind-Value="saltwaterFishModel.IsVenomous"
+                                    id="isVenomous" />
+                                <label class="form-check-label" for="isVenomous">Venomous</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @if (saltwaterFishModel.IsSchooling)
+                {
+                    <div class="alert alert-info mt-4" role="alert">
+                        <div class="row g-3 align-items-center">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold mb-1">Recommended School Size</label>
+                                <InputNumber class="form-control form-control-lg"
+                                    @bind-Value="saltwaterFishModel.RecommendedSchoolSize" />
+                            </div>
+                            <div class="col-md-6">
+                                <small class="text-muted">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    This fish should be kept in a school for optimal health.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    };
+
+    private RenderFragment FreshwaterInvertebrateForm() => __builder =>
+    {
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Freshwater Invertebrate Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Invertebrate Type *</label>
+                        <InputSelect class="form-select" @bind-Value="freshwaterInvertModel.InvertebrateType">
+                            <option value="">-- Select Type --</option>
+                            @foreach (var type in Enum.GetValues<FreshwaterInvertebrateType>())
+                            {
+                                <option value="@type">@type</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Care Level</label>
+                        <InputText class="form-control" @bind-Value="freshwaterInvertModel.CareLevel"
+                            placeholder="e.g., Beginner, Intermediate, Advanced" />
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Adult Size (inches)</label>
+                        <InputNumber class="form-control" @bind-Value="freshwaterInvertModel.AdultSize" />
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Coloration</label>
+                        <InputText class="form-control" @bind-Value="freshwaterInvertModel.Coloration" />
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Min Tank Size (gallons)</label>
+                        <InputNumber class="form-control" @bind-Value="freshwaterInvertModel.MinTankSize" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Habitat</label>
+                        <InputText class="form-control" @bind-Value="freshwaterInvertModel.Habitat" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Behavior</label>
+                        <InputText class="form-control" @bind-Value="freshwaterInvertModel.Behavior"
+                            placeholder="e.g., Peaceful, Active" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Placement</label>
+                        <InputText class="form-control" @bind-Value="freshwaterInvertModel.Placement"
+                            placeholder="e.g., Substrate, Driftwood" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Diet</label>
+                        <InputText class="form-control" @bind-Value="freshwaterInvertModel.Diet" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Temperature Range (°F)</label>
+                        <div class="row">
+                            <div class="col">
+                                <InputNumber class="form-control" @bind-Value="freshwaterInvertModel.OptimalTemperatureMin"
+                                    placeholder="Min" />
+                            </div>
+                            <div class="col">
+                                <InputNumber class="form-control" @bind-Value="freshwaterInvertModel.OptimalTemperatureMax"
+                                    placeholder="Max" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">pH Range</label>
+                        <InputText class="form-control" @bind-Value="freshwaterInvertModel.pHRange"
+                            placeholder="e.g., 6.5-7.5" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Hardness Range</label>
+                        <InputText class="form-control" @bind-Value="freshwaterInvertModel.HardnessRange" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Feeding Frequency</label>
+                        <InputText class="form-control" @bind-Value="freshwaterInvertModel.FeedingFrequency" />
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <div class="form-check">
+                            <InputCheckbox class="form-check-input" @bind-Value="freshwaterInvertModel.IsPlantSafe" />
+                            <label class="form-check-label">Plant Safe</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="form-check">
+                            <InputCheckbox class="form-check-input" @bind-Value="freshwaterInvertModel.IsAlgaeEater" />
+                            <label class="form-check-label">Algae Eater</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="form-check">
+                            <InputCheckbox class="form-check-input" @bind-Value="freshwaterInvertModel.IsScavenger" />
+                            <label class="form-check-label">Scavenger</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="form-check">
+                            <InputCheckbox class="form-check-input" @bind-Value="freshwaterInvertModel.SensitiveToCopper" />
+                            <label class="form-check-label">Copper Sensitive</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    };
+
+    private RenderFragment SaltwaterInvertebrateForm() => __builder =>
+    {
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Saltwater Invertebrate Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Invertebrate Type *</label>
+                        <InputSelect class="form-select" @bind-Value="saltwaterInvertModel.InvertebrateType">
+                            <option value="">-- Select Type --</option>
+                            @foreach (var type in Enum.GetValues<InvertebrateType>())
+                            {
+                                <option value="@type">@type</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Care Level</label>
+                        <InputText class="form-control" @bind-Value="saltwaterInvertModel.CareLevel"
+                            placeholder="e.g., Beginner, Intermediate, Advanced" />
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Adult Size (inches)</label>
+                        <InputNumber class="form-control" @bind-Value="saltwaterInvertModel.AdultSize" />
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Coloration</label>
+                        <InputText class="form-control" @bind-Value="saltwaterInvertModel.Coloration" />
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Min Tank Size (gallons)</label>
+                        <InputNumber class="form-control" @bind-Value="saltwaterInvertModel.MinTankSize" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Habitat</label>
+                        <InputText class="form-control" @bind-Value="saltwaterInvertModel.Habitat" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Behavior</label>
+                        <InputText class="form-control" @bind-Value="saltwaterInvertModel.Behavior" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Placement</label>
+                        <InputText class="form-control" @bind-Value="saltwaterInvertModel.Placement"
+                            placeholder="e.g., Sand bed, Rock work" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Diet</label>
+                        <InputText class="form-control" @bind-Value="saltwaterInvertModel.Diet" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Temperature Range (°F)</label>
+                        <div class="row">
+                            <div class="col">
+                                <InputNumber class="form-control" @bind-Value="saltwaterInvertModel.OptimalTemperatureMin"
+                                    placeholder="Min" />
+                            </div>
+                            <div class="col">
+                                <InputNumber class="form-control" @bind-Value="saltwaterInvertModel.OptimalTemperatureMax"
+                                    placeholder="Max" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Salinity Range (SG)</label>
+                        <div class="row">
+                            <div class="col">
+                                <InputNumber class="form-control" @bind-Value="saltwaterInvertModel.OptimalSalinityMin"
+                                    placeholder="Min" />
+                            </div>
+                            <div class="col">
+                                <InputNumber class="form-control" @bind-Value="saltwaterInvertModel.OptimalSalinityMax"
+                                    placeholder="Max" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">pH Range</label>
+                        <InputText class="form-control" @bind-Value="saltwaterInvertModel.pHRange"
+                            placeholder="e.g., 8.1-8.4" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Feeding Frequency</label>
+                        <InputText class="form-control" @bind-Value="saltwaterInvertModel.FeedingFrequency" />
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <div class="form-check">
+                            <InputCheckbox class="form-check-input" @bind-Value="saltwaterInvertModel.IsReefSafe" />
+                            <label class="form-check-label">Reef Safe</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="form-check">
+                            <InputCheckbox class="form-check-input" @bind-Value="saltwaterInvertModel.IsCleaner" />
+                            <label class="form-check-label">Cleaner</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="form-check">
+                            <InputCheckbox class="form-check-input" @bind-Value="saltwaterInvertModel.RequiresAcclimation" />
+                            <label class="form-check-label">Requires Acclimation</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    };
+
+    private RenderFragment CoralForm() => __builder =>
+    {
+        <div class="card mb-4">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Coral Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Coral Type *</label>
+                            <InputSelect class="form-select" @bind-Value="coralModel.CoralType">
+                                <option value="">-- Select Type --</option>
+                                @foreach (var type in Enum.GetValues<CoralType>())
+                                {
+                                    <option value="@type">@type</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Care Level</label>
+                            <InputText class="form-control" @bind-Value="coralModel.CareLevel"
+                                placeholder="e.g., Beginner, Intermediate, Advanced, Expert" />
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Coral Family</label>
+                            <InputText class="form-control" @bind-Value="coralModel.CoralFamily" />
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Scientific Name</label>
+                            <InputText class="form-control" @bind-Value="coralModel.ScientificName" />
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Colony Size (inches)</label>
+                            <InputNumber class="form-control" @bind-Value="coralModel.ColonySize" />
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Growth Rate</label>
+                            <InputText class="form-control" @bind-Value="coralModel.GrowthRate"
+                                placeholder="e.g., inches/year" />
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Coloration</label>
+                            <InputText class="form-control" @bind-Value="coralModel.Coloration" />
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Lighting Needs</label>
+                            <InputText class="form-control" @bind-Value="coralModel.LightingNeeds"
+                                placeholder="e.g., Low, Moderate, High" />
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Light Intensity (PAR)</label>
+                            <InputText class="form-control" @bind-Value="coralModel.LightIntensityPAR"
+                                placeholder="e.g., 100-200 PAR" />
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Flow Needs</label>
+                            <InputText class="form-control" @bind-Value="coralModel.FlowNeeds"
+                                placeholder="e.g., Low, Moderate, High" />
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Flow Type</label>
+                            <InputText class="form-control" @bind-Value="coralModel.FlowType"
+                                placeholder="e.g., Direct, Indirect" />
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Placement</label>
+                            <InputText class="form-control" @bind-Value="coralModel.Placement"
+                                placeholder="e.g., Bottom, Middle, Top" />
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Spacing Requirement (inches)</label>
+                            <InputNumber class="form-control" @bind-Value="coralModel.SpacingRequirement" />
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Temperature Range (°F)</label>
+                            <div class="row">
+                                <div class="col">
+                                    <InputNumber class="form-control" @bind-Value="coralModel.OptimalTemperatureMin"
+                                        placeholder="Min" />
+                                </div>
+                                <div class="col">
+                                    <InputNumber class="form-control" @bind-Value="coralModel.OptimalTemperatureMax"
+                                        placeholder="Max" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Salinity Range (SG)</label>
+                            <div class="row">
+                                <div class="col">
+                                    <InputNumber class="form-control" @bind-Value="coralModel.OptimalSalinityMin"
+                                        placeholder="Min" />
+                                </div>
+                                <div class="col">
+                                    <InputNumber class="form-control" @bind-Value="coralModel.OptimalSalinityMax"
+                                        placeholder="Max" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">pH Range</label>
+                            <InputText class="form-control" @bind-Value="coralModel.pHRange" placeholder="e.g., 8.1-8.4" />
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Alkalinity Range (dKH)</label>
+                            <InputText class="form-control" @bind-Value="coralModel.AlkalinityRange"
+                                placeholder="e.g., 8-12 dKH" />
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Calcium Range (ppm)</label>
+                            <InputText class="form-control" @bind-Value="coralModel.CalciumRange"
+                                placeholder="e.g., 400-450 ppm" />
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Magnesium Range (ppm)</label>
+                            <InputText class="form-control" @bind-Value="coralModel.MagnesiumRange"
+                                placeholder="e.g., 1250-1350 ppm" />
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <div class="form-check">
+                                <InputCheckbox class="form-check-input" @bind-Value="coralModel.IsAggressive" />
+                                <label class="form-check-label">Aggressive</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="form-check">
+                                <InputCheckbox class="form-check-input" @bind-Value="coralModel.RequiresFeeding" />
+                                <label class="form-check-label">Requires Feeding</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="form-check">
+                                <InputCheckbox class="form-check-input" @bind-Value="coralModel.CanBeFragged" />
+                                <label class="form-check-label">Can Be Fragged</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (coralModel.RequiresFeeding)
+                    {
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Food Types</label>
+                                <InputText class="form-control" @bind-Value="coralModel.FoodTypes" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Feeding Frequency</label>
+                                <InputText class="form-control" @bind-Value="coralModel.FeedingFrequency" />
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    };
+
+    private RenderFragment PlantForm() => __builder =>
+    {
+        <div class="card mb-4">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Plant Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Plant Type *</label>
+                            <InputSelect class="form-select" @bind-Value="plantModel.PlantType">
+                                <option value="">-- Select Type --</option>
+                                @foreach (var type in Enum.GetValues<PlantType>())
+                                {
+                                    <option value="@type">@type</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Care Level</label>
+                            <InputText class="form-control" @bind-Value="plantModel.CareLevel"
+                                placeholder="e.g., Easy, Moderate, Difficult" />
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Max Height (inches)</label>
+                            <InputNumber class="form-control" @bind-Value="plantModel.MaxHeight" />
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Growth Rate</label>
+                            <InputText class="form-control" @bind-Value="plantModel.GrowthRate"
+                                placeholder="e.g., Slow, Moderate, Fast" />
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Coloration</label>
+                            <InputText class="form-control" @bind-Value="plantModel.Coloration" />
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Placement</label>
+                            <InputText class="form-control" @bind-Value="plantModel.Placement"
+                                placeholder="e.g., Foreground, Midground, Background" />
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Lighting Requirement</label>
+                            <InputText class="form-control" @bind-Value="plantModel.LightingRequirement"
+                                placeholder="e.g., Low, Medium, High" />
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Temperature Range (°F)</label>
+                            <div class="row">
+                                <div class="col">
+                                    <InputNumber class="form-control" @bind-Value="plantModel.OptimalTemperatureMin"
+                                        placeholder="Min" />
+                                </div>
+                                <div class="col">
+                                    <InputNumber class="form-control" @bind-Value="plantModel.OptimalTemperatureMax"
+                                        placeholder="Max" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">pH Range</label>
+                            <InputText class="form-control" @bind-Value="plantModel.pHRange" placeholder="e.g., 6.0-7.5" />
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Hardness Range</label>
+                            <InputText class="form-control" @bind-Value="plantModel.HardnessRange"
+                                placeholder="e.g., 3-10 dGH" />
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Substrate Requirement</label>
+                            <InputText class="form-control" @bind-Value="plantModel.SubstrateRequirement"
+                                placeholder="e.g., Sand, Gravel, Soil" />
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Propagation Method</label>
+                            <InputText class="form-control" @bind-Value="plantModel.PropagationMethod"
+                                placeholder="e.g., Cuttings, Runners" />
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <div class="form-check">
+                                <InputCheckbox class="form-check-input" @bind-Value="plantModel.RequiresCO2" />
+                                <label class="form-check-label">Requires CO2</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="form-check">
+                                <InputCheckbox class="form-check-input" @bind-Value="plantModel.RequiresRootTabs" />
+                                <label class="form-check-label">Requires Root Tabs</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="form-check">
+                                <InputCheckbox class="form-check-input" @bind-Value="plantModel.RequiresFertilization" />
+                                <label class="form-check-label">Requires Fertilization</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="form-check">
+                                <InputCheckbox class="form-check-input" @bind-Value="plantModel.CanBePropagated" />
+                                <label class="form-check-label">Can Be Propagated</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="form-check">
+                                <InputCheckbox class="form-check-input" @bind-Value="plantModel.SafeForShrimp" />
+                                <label class="form-check-label">Safe For Shrimp</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="form-check">
+                                <InputCheckbox class="form-check-input" @bind-Value="plantModel.OxygenProducer" />
+                                <label class="form-check-label">Oxygen Producer</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="form-check">
+                                <InputCheckbox class="form-check-input" @bind-Value="plantModel.NitrateAbsorber" />
+                                <label class="form-check-label">Nitrate Absorber</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    };
+
+    private async Task HandleSubmit()
+    {
+        if (userId == null || tank == null) return;
+
+        try
+        {
+            Livestock livestock = selectedCategory switch
+            {
+                "FreshwaterFish" => new FreshwaterFish
+                {
+                    Name = commonModel.Name,
+                    Species = commonModel.Species,
+                    AddedOn = commonModel.AddedOn,
+                    Notes = commonModel.Notes,
+                    FishType = freshwaterFishModel.FishType,
+                    AdultSize = freshwaterFishModel.AdultSize,
+                    Coloration = freshwaterFishModel.Coloration,
+                    BodyShape = freshwaterFishModel.BodyShape,
+                    HasLongFins = freshwaterFishModel.HasLongFins,
+                    Temperament = freshwaterFishModel.Temperament,
+                    ActivityLevel = freshwaterFishModel.ActivityLevel,
+                    IsSchooling = freshwaterFishModel.IsSchooling,
+                    RecommendedSchoolSize = freshwaterFishModel.RecommendedSchoolSize,
+                    IsNocturnal = freshwaterFishModel.IsNocturnal,
+                    MinTankSize = freshwaterFishModel.MinTankSize,
+                    SwimmingRegion = freshwaterFishModel.SwimmingRegion,
+                    RequiresPlants = freshwaterFishModel.RequiresPlants,
+                    RequiresHidingSpots = freshwaterFishModel.RequiresHidingSpots,
+                    OptimalTemperatureMin = freshwaterFishModel.OptimalTemperatureMin,
+                    OptimalTemperatureMax = freshwaterFishModel.OptimalTemperatureMax,
+                    pHRange = freshwaterFishModel.pHRange,
+                    HardnessRange = freshwaterFishModel.HardnessRange,
+                    PreferredWaterFlow = freshwaterFishModel.PreferredWaterFlow,
+                    Diet = freshwaterFishModel.Diet,
+                    FoodTypes = freshwaterFishModel.FoodTypes,
+                    FeedingFrequency = freshwaterFishModel.FeedingFrequency,
+                    IsBottomFeeder = freshwaterFishModel.IsBottomFeeder,
+                    CareLevel = freshwaterFishModel.CareLevel,
+                    IsJumper = freshwaterFishModel.IsJumper
+                },
+                "SaltwaterFish" => new SaltwaterFish
+                {
+                    Name = commonModel.Name,
+                    Species = commonModel.Species,
+                    AddedOn = commonModel.AddedOn,
+                    Notes = commonModel.Notes,
+                    FishType = saltwaterFishModel.FishType,
+                    AdultSize = saltwaterFishModel.AdultSize,
+                    Coloration = saltwaterFishModel.Coloration,
+                    BodyShape = saltwaterFishModel.BodyShape,
+                    Temperament = saltwaterFishModel.Temperament,
+                    ActivityLevel = saltwaterFishModel.ActivityLevel,
+                    IsReefSafe = saltwaterFishModel.IsReefSafe,
+                    IsSchooling = saltwaterFishModel.IsSchooling,
+                    RecommendedSchoolSize = saltwaterFishModel.RecommendedSchoolSize,
+                    MinTankSize = saltwaterFishModel.MinTankSize,
+                    SwimmingRegion = saltwaterFishModel.SwimmingRegion,
+                    RequiresLiveRock = saltwaterFishModel.RequiresLiveRock,
+                    RequiresHidingSpots = saltwaterFishModel.RequiresHidingSpots,
+                    OptimalTemperatureMin = saltwaterFishModel.OptimalTemperatureMin,
+                    OptimalTemperatureMax = saltwaterFishModel.OptimalTemperatureMax,
+                    OptimalSalinityMin = saltwaterFishModel.OptimalSalinityMin,
+                    OptimalSalinityMax = saltwaterFishModel.OptimalSalinityMax,
+                    pHRange = saltwaterFishModel.pHRange,
+                    Diet = saltwaterFishModel.Diet,
+                    FoodTypes = saltwaterFishModel.FoodTypes,
+                    FeedingFrequency = saltwaterFishModel.FeedingFrequency,
+                    FeedingBehavior = saltwaterFishModel.FeedingBehavior,
+                    CareLevel = saltwaterFishModel.CareLevel,
+                    NipsAtCorals = saltwaterFishModel.NipsAtCorals,
+                    IsJumper = saltwaterFishModel.IsJumper,
+                    IsVenomous = saltwaterFishModel.IsVenomous
+                },
+                "FreshwaterInvertebrate" => new FreshwaterInvertebrate
+                {
+                    Name = commonModel.Name,
+                    Species = commonModel.Species,
+                    AddedOn = commonModel.AddedOn,
+                    Notes = commonModel.Notes,
+                    InvertebrateType = freshwaterInvertModel.InvertebrateType,
+                    AdultSize = freshwaterInvertModel.AdultSize,
+                    Coloration = freshwaterInvertModel.Coloration,
+                    Habitat = freshwaterInvertModel.Habitat,
+                    Behavior = freshwaterInvertModel.Behavior,
+                    IsPlantSafe = freshwaterInvertModel.IsPlantSafe,
+                    MinTankSize = freshwaterInvertModel.MinTankSize,
+                    Placement = freshwaterInvertModel.Placement,
+                    OptimalTemperatureMin = freshwaterInvertModel.OptimalTemperatureMin,
+                    OptimalTemperatureMax = freshwaterInvertModel.OptimalTemperatureMax,
+                    pHRange = freshwaterInvertModel.pHRange,
+                    HardnessRange = freshwaterInvertModel.HardnessRange,
+                    CareLevel = freshwaterInvertModel.CareLevel,
+                    Diet = freshwaterInvertModel.Diet,
+                    FeedingFrequency = freshwaterInvertModel.FeedingFrequency,
+                    IsAlgaeEater = freshwaterInvertModel.IsAlgaeEater,
+                    IsScavenger = freshwaterInvertModel.IsScavenger,
+                    SensitiveToCopper = freshwaterInvertModel.SensitiveToCopper
+                },
+                "SaltwaterInvertebrate" => new SaltwaterInvertebrate
+                {
+                    Name = commonModel.Name,
+                    Species = commonModel.Species,
+                    AddedOn = commonModel.AddedOn,
+                    Notes = commonModel.Notes,
+                    InvertebrateType = saltwaterInvertModel.InvertebrateType,
+                    AdultSize = saltwaterInvertModel.AdultSize,
+                    Coloration = saltwaterInvertModel.Coloration,
+                    Habitat = saltwaterInvertModel.Habitat,
+                    Behavior = saltwaterInvertModel.Behavior,
+                    IsReefSafe = saltwaterInvertModel.IsReefSafe,
+                    MinTankSize = saltwaterInvertModel.MinTankSize,
+                    Placement = saltwaterInvertModel.Placement,
+                    OptimalTemperatureMin = saltwaterInvertModel.OptimalTemperatureMin,
+                    OptimalTemperatureMax = saltwaterInvertModel.OptimalTemperatureMax,
+                    OptimalSalinityMin = saltwaterInvertModel.OptimalSalinityMin,
+                    OptimalSalinityMax = saltwaterInvertModel.OptimalSalinityMax,
+                    pHRange = saltwaterInvertModel.pHRange,
+                    CareLevel = saltwaterInvertModel.CareLevel,
+                    Diet = saltwaterInvertModel.Diet,
+                    FeedingFrequency = saltwaterInvertModel.FeedingFrequency,
+                    IsCleaner = saltwaterInvertModel.IsCleaner,
+                    RequiresAcclimation = saltwaterInvertModel.RequiresAcclimation
+                },
+                "Coral" => new Coral
+                {
+                    Name = commonModel.Name,
+                    Species = commonModel.Species,
+                    AddedOn = commonModel.AddedOn,
+                    Notes = commonModel.Notes,
+                    CoralType = coralModel.CoralType,
+                    CoralFamily = coralModel.CoralFamily,
+                    ScientificName = coralModel.ScientificName,
+                    ColonySize = coralModel.ColonySize,
+                    GrowthRate = coralModel.GrowthRate,
+                    Coloration = coralModel.Coloration,
+                    LightingNeeds = coralModel.LightingNeeds,
+                    LightIntensityPAR = coralModel.LightIntensityPAR,
+                    FlowNeeds = coralModel.FlowNeeds,
+                    FlowType = coralModel.FlowType,
+                    Placement = coralModel.Placement,
+                    SpacingRequirement = coralModel.SpacingRequirement,
+                    IsAggressive = coralModel.IsAggressive,
+                    OptimalTemperatureMin = coralModel.OptimalTemperatureMin,
+                    OptimalTemperatureMax = coralModel.OptimalTemperatureMax,
+                    OptimalSalinityMin = coralModel.OptimalSalinityMin,
+                    OptimalSalinityMax = coralModel.OptimalSalinityMax,
+                    pHRange = coralModel.pHRange,
+                    AlkalinityRange = coralModel.AlkalinityRange,
+                    CalciumRange = coralModel.CalciumRange,
+                    MagnesiumRange = coralModel.MagnesiumRange,
+                    RequiresFeeding = coralModel.RequiresFeeding,
+                    FoodTypes = coralModel.FoodTypes,
+                    FeedingFrequency = coralModel.FeedingFrequency,
+                    CareLevel = coralModel.CareLevel,
+                    CanBeFragged = coralModel.CanBeFragged
+                },
+                "Plant" => new Plant
+                {
+                    Name = commonModel.Name,
+                    Species = commonModel.Species,
+                    AddedOn = commonModel.AddedOn,
+                    Notes = commonModel.Notes,
+                    PlantType = plantModel.PlantType,
+                    MaxHeight = plantModel.MaxHeight,
+                    GrowthRate = plantModel.GrowthRate,
+                    Coloration = plantModel.Coloration,
+                    Placement = plantModel.Placement,
+                    LightingRequirement = plantModel.LightingRequirement,
+                    RequiresCO2 = plantModel.RequiresCO2,
+                    CareLevel = plantModel.CareLevel,
+                    OptimalTemperatureMin = plantModel.OptimalTemperatureMin,
+                    OptimalTemperatureMax = plantModel.OptimalTemperatureMax,
+                    pHRange = plantModel.pHRange,
+                    HardnessRange = plantModel.HardnessRange,
+                    SubstrateRequirement = plantModel.SubstrateRequirement,
+                    RequiresRootTabs = plantModel.RequiresRootTabs,
+                    RequiresFertilization = plantModel.RequiresFertilization,
+                    CanBePropagated = plantModel.CanBePropagated,
+                    PropagationMethod = plantModel.PropagationMethod,
+                    SafeForShrimp = plantModel.SafeForShrimp,
+                    OxygenProducer = plantModel.OxygenProducer,
+                    NitrateAbsorber = plantModel.NitrateAbsorber
+                },
+                _ => throw new InvalidOperationException("Invalid livestock category")
+            };
+
+            await LivestockService.CreateLivestockAsync(livestock, TankId, userId);
+            Navigation.NavigateTo($"/tanks/dashboard/{TankId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error adding livestock: {ex.Message}");
+        }
+    }
+
+    // Form Models
+    public class CommonLivestockModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Species { get; set; } = string.Empty;
+        public DateTime AddedOn { get; set; } = DateTime.Now;
+        public string Notes { get; set; } = string.Empty;
+    }
+
+    public class FreshwaterFishModel
+    {
+        public FreshwaterFishType FishType { get; set; }
+        public double AdultSize { get; set; }
+        public string Coloration { get; set; } = string.Empty;
+        public string BodyShape { get; set; } = string.Empty;
+        public bool HasLongFins { get; set; }
+        public string Temperament { get; set; } = string.Empty;
+        public string ActivityLevel { get; set; } = string.Empty;
+        public bool IsSchooling { get; set; }
+        public int RecommendedSchoolSize { get; set; }
+        public bool IsNocturnal { get; set; }
+        public double MinTankSize { get; set; }
+        public string SwimmingRegion { get; set; } = string.Empty;
+        public bool RequiresPlants { get; set; }
+        public bool RequiresHidingSpots { get; set; }
+        public double OptimalTemperatureMin { get; set; }
+        public double OptimalTemperatureMax { get; set; }
+        public string pHRange { get; set; } = string.Empty;
+        public string HardnessRange { get; set; } = string.Empty;
+        public string PreferredWaterFlow { get; set; } = string.Empty;
+        public string Diet { get; set; } = string.Empty;
+        public string FoodTypes { get; set; } = string.Empty;
+        public string FeedingFrequency { get; set; } = string.Empty;
+        public bool IsBottomFeeder { get; set; }
+        public string CareLevel { get; set; } = string.Empty;
+        public bool IsJumper { get; set; }
+    }
+
+    public class SaltwaterFishModel
+    {
+        public SaltwaterFishType FishType { get; set; }
+        public double AdultSize { get; set; }
+        public string Coloration { get; set; } = string.Empty;
+        public string BodyShape { get; set; } = string.Empty;
+        public string Temperament { get; set; } = string.Empty;
+        public string ActivityLevel { get; set; } = string.Empty;
+        public bool IsReefSafe { get; set; }
+        public bool IsSchooling { get; set; }
+        public int RecommendedSchoolSize { get; set; }
+        public double MinTankSize { get; set; }
+        public string SwimmingRegion { get; set; } = string.Empty;
+        public bool RequiresLiveRock { get; set; }
+        public bool RequiresHidingSpots { get; set; }
+        public double OptimalTemperatureMin { get; set; }
+        public double OptimalTemperatureMax { get; set; }
+        public double OptimalSalinityMin { get; set; }
+        public double OptimalSalinityMax { get; set; }
+        public string pHRange { get; set; } = string.Empty;
+        public string Diet { get; set; } = string.Empty;
+        public string FoodTypes { get; set; } = string.Empty;
+        public string FeedingFrequency { get; set; } = string.Empty;
+        public string FeedingBehavior { get; set; } = string.Empty;
+        public string CareLevel { get; set; } = string.Empty;
+        public bool NipsAtCorals { get; set; }
+        public bool IsJumper { get; set; }
+        public bool IsVenomous { get; set; }
+    }
+
+    public class FreshwaterInvertebrateModel
+    {
+        public FreshwaterInvertebrateType InvertebrateType { get; set; }
+        public double AdultSize { get; set; }
+        public string Coloration { get; set; } = string.Empty;
+        public string Habitat { get; set; } = string.Empty;
+        public string Behavior { get; set; } = string.Empty;
+        public bool IsPlantSafe { get; set; }
+        public double MinTankSize { get; set; }
+        public string Placement { get; set; } = string.Empty;
+        public double OptimalTemperatureMin { get; set; }
+        public double OptimalTemperatureMax { get; set; }
+        public string pHRange { get; set; } = string.Empty;
+        public string HardnessRange { get; set; } = string.Empty;
+        public string CareLevel { get; set; } = string.Empty;
+        public string Diet { get; set; } = string.Empty;
+        public string FeedingFrequency { get; set; } = string.Empty;
+        public bool IsAlgaeEater { get; set; }
+        public bool IsScavenger { get; set; }
+        public bool SensitiveToCopper { get; set; }
+    }
+
+    public class SaltwaterInvertebrateModel
+    {
+        public InvertebrateType InvertebrateType { get; set; }
+        public double AdultSize { get; set; }
+        public string Coloration { get; set; } = string.Empty;
+        public string Habitat { get; set; } = string.Empty;
+        public string Behavior { get; set; } = string.Empty;
+        public bool IsReefSafe { get; set; }
+        public double MinTankSize { get; set; }
+        public string Placement { get; set; } = string.Empty;
+        public double OptimalTemperatureMin { get; set; }
+        public double OptimalTemperatureMax { get; set; }
+        public double OptimalSalinityMin { get; set; }
+        public double OptimalSalinityMax { get; set; }
+        public string pHRange { get; set; } = string.Empty;
+        public string CareLevel { get; set; } = string.Empty;
+        public string Diet { get; set; } = string.Empty;
+        public string FeedingFrequency { get; set; } = string.Empty;
+        public bool IsCleaner { get; set; }
+        public bool RequiresAcclimation { get; set; }
+    }
+
+    public class CoralModel
+    {
+        public CoralType CoralType { get; set; }
+        public string CoralFamily { get; set; } = string.Empty;
+        public string ScientificName { get; set; } = string.Empty;
+        public double ColonySize { get; set; }
+        public string GrowthRate { get; set; } = string.Empty;
+        public string Coloration { get; set; } = string.Empty;
+        public string LightingNeeds { get; set; } = string.Empty;
+        public string LightIntensityPAR { get; set; } = string.Empty;
+        public string FlowNeeds { get; set; } = string.Empty;
+        public string FlowType { get; set; } = string.Empty;
+        public string Placement { get; set; } = string.Empty;
+        public double SpacingRequirement { get; set; }
+        public bool IsAggressive { get; set; }
+        public double OptimalTemperatureMin { get; set; }
+        public double OptimalTemperatureMax { get; set; }
+        public double OptimalSalinityMin { get; set; }
+        public double OptimalSalinityMax { get; set; }
+        public string pHRange { get; set; } = string.Empty;
+        public string AlkalinityRange { get; set; } = string.Empty;
+        public string CalciumRange { get; set; } = string.Empty;
+        public string MagnesiumRange { get; set; } = string.Empty;
+        public bool RequiresFeeding { get; set; }
+        public string FoodTypes { get; set; } = string.Empty;
+        public string FeedingFrequency { get; set; } = string.Empty;
+        public string CareLevel { get; set; } = string.Empty;
+        public bool CanBeFragged { get; set; }
+    }
+
+    public class PlantModel
+    {
+        public PlantType PlantType { get; set; }
+        public double MaxHeight { get; set; }
+        public string GrowthRate { get; set; } = string.Empty;
+        public string Coloration { get; set; } = string.Empty;
+        public string Placement { get; set; } = string.Empty;
+        public string LightingRequirement { get; set; } = string.Empty;
+        public bool RequiresCO2 { get; set; }
+        public string CareLevel { get; set; } = string.Empty;
+        public double OptimalTemperatureMin { get; set; }
+        public double OptimalTemperatureMax { get; set; }
+        public string pHRange { get; set; } = string.Empty;
+        public string HardnessRange { get; set; } = string.Empty;
+        public string SubstrateRequirement { get; set; } = string.Empty;
+        public bool RequiresRootTabs { get; set; }
+        public bool RequiresFertilization { get; set; }
+        public bool CanBePropagated { get; set; }
+        public string PropagationMethod { get; set; } = string.Empty;
+        public bool SafeForShrimp { get; set; }
+        public bool OxygenProducer { get; set; }
+        public bool NitrateAbsorber { get; set; }
+    }
+}

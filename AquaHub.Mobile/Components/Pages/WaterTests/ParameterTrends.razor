@@ -1,0 +1,565 @@
+@page "/tanks/{TankId:int}/parameter-trends"
+@using AquaHub.Shared.Services.Interfaces
+@using AquaHub.Shared.Models
+@using AquaHub.Shared.Models.ViewModels
+@using AquaHub.Shared.Models.Enums
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+@inject IWaterTestService WaterTestService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JSRuntime
+@attribute [Authorize]
+
+<PageTitle>Parameter Trends - @viewModel?.Tank?.Name</PageTitle>
+
+<div class="container-fluid py-4">
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-muted">Analyzing water parameter trends...</p>
+        </div>
+    }
+    else if (viewModel?.Tank == null)
+    {
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle-fill"></i> Tank not found.
+        </div>
+    }
+    else
+    {
+        <!-- Header -->
+        <div class="card shadow-lg border-0 mb-4">
+            <div class="card-header border-0 text-white py-4"
+                style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div
+                    class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                    <div>
+                        <h1 class="mb-1 fw-bold">
+                            <i class="bi bi-graph-up-arrow fs-1"></i>
+                            Water Parameter Trends
+                        </h1>
+                        <p class="mb-0 opacity-90">
+                            <i class="bi bi-droplet-fill me-1"></i>
+                            @viewModel.Tank.Name - Advanced Analytics
+                        </p>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="/tanks/@TankId/watertests/add" class="btn btn-light btn-lg">
+                            <i class="bi bi-plus-circle me-2"></i>
+                            Record Test
+                        </a>
+                        <a href="/tanks/@TankId/watertests" class="btn btn-outline-light btn-lg">
+                            <i class="bi bi-arrow-left me-2"></i>
+                            Back to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Date Range Filter -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-calendar-range me-1"></i>
+                            Start Date
+                        </label>
+                        <input type="date" class="form-control" @bind="startDate" @bind:event="oninput" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-calendar-check me-1"></i>
+                            End Date
+                        </label>
+                        <input type="date" class="form-control" @bind="endDate" @bind:event="oninput" />
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-primary w-100" @onclick="LoadTrends">
+                            <i class="bi bi-funnel me-2"></i>
+                            Apply Filter
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-3 d-flex gap-2 flex-wrap">
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => SetDateRange(30)">
+                        Last 30 Days
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => SetDateRange(90)">
+                        Last 3 Months
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => SetDateRange(180)">
+                        Last 6 Months
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => SetDateRange(365)">
+                        Last Year
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="SetAllTime">
+                        All Time
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        @if (viewModel.TotalTests == 0)
+        {
+            <!-- Empty State -->
+            <div class="card shadow-sm border-0">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-graph-up text-muted mb-3" style="font-size: 4rem;"></i>
+                    <h3 class="text-muted mb-3">No Water Tests in Date Range</h3>
+                    <p class="text-muted mb-4">Try expanding your date range or record some water tests.</p>
+                    <a href="/tanks/@TankId/watertests/add" class="btn btn-primary btn-lg">
+                        <i class="bi bi-plus-circle me-2"></i>
+                        Record Water Test
+                    </a>
+                </div>
+            </div>
+        }
+        else
+        {
+            <!-- Alerts Section -->
+            @if (viewModel.Alerts["Critical"].Any() || viewModel.Alerts["Warning"].Any())
+            {
+                <div class="row g-3 mb-4">
+                    @if (viewModel.Alerts["Critical"].Any())
+                    {
+                        <div class="col-12">
+                            <div class="alert alert-danger shadow-sm border-0">
+                                <h5 class="alert-heading mb-3">
+                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                    Critical Alerts
+                                </h5>
+                                <ul class="mb-0">
+                                    @foreach (var alert in viewModel.Alerts["Critical"])
+                                    {
+                                        <li>@alert</li>
+                                    }
+                                </ul>
+                            </div>
+                        </div>
+                    }
+                    @if (viewModel.Alerts["Warning"].Any())
+                    {
+                        <div class="col-12">
+                            <div class="alert alert-warning shadow-sm border-0">
+                                <h5 class="alert-heading mb-3">
+                                    <i class="bi bi-exclamation-circle-fill me-2"></i>
+                                    Warnings
+                                </h5>
+                                <ul class="mb-0">
+                                    @foreach (var alert in viewModel.Alerts["Warning"])
+                                    {
+                                        <li>@alert</li>
+                                    }
+                                </ul>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
+            <!-- Summary Stats -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-3 col-sm-6">
+                    <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #667eea !important;">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="rounded-circle bg-primary bg-opacity-10 p-3">
+                                        <i class="bi bi-clipboard-data text-primary fs-3"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="text-muted mb-1 small">Total Tests</h6>
+                                    <h2 class="mb-0 fw-bold">@viewModel.TotalTests</h2>
+                                    <small class="text-muted">in selected range</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 col-sm-6">
+                    <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #66bb6a !important;">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="rounded-circle bg-success bg-opacity-10 p-3">
+                                        <i class="bi bi-calendar-event text-success fs-3"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="text-muted mb-1 small">Test Frequency</h6>
+                                    <h2 class="mb-0 fw-bold">@viewModel.AverageTestFrequency.ToString("F1")</h2>
+                                    <small class="text-muted">days avg</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 col-sm-6">
+                    <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #42a5f5 !important;">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="rounded-circle bg-info bg-opacity-10 p-3">
+                                        <i class="bi bi-check-circle text-info fs-3"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="text-muted mb-1 small">In Range</h6>
+                                    <h2 class="mb-0 fw-bold">@GetParametersInRange()</h2>
+                                    <small class="text-muted">of @viewModel.ParameterTrends.Count params</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 col-sm-6">
+                    <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #ff6b6b !important;">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="rounded-circle bg-danger bg-opacity-10 p-3">
+                                        <i class="bi bi-exclamation-triangle text-danger fs-3"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="text-muted mb-1 small">Alerts</h6>
+                                    <h2 class="mb-0 fw-bold">@(viewModel.Alerts["Critical"].Count +
+                                                                        viewModel.Alerts["Warning"].Count)</h2>
+                                    <small class="text-muted">needs attention</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Parameter Trend Charts -->
+            <div class="row g-4 mb-4">
+                @foreach (var trend in viewModel.ParameterTrends.Where(t => t.Statistics.TotalReadings > 0))
+                {
+                    <div class="col-lg-6">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-header bg-white border-0 py-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0 fw-bold">
+                                        <i class="bi bi-graph-up me-2 @GetTrendIconColor(trend)"></i>
+                                        @trend.ParameterName
+                                        @if (!string.IsNullOrEmpty(trend.Unit))
+                                        {
+                                            <span class="text-muted">(@trend.Unit)</span>
+                                        }
+                                    </h5>
+                                    <span class="badge @GetTrendBadgeClass(trend)">
+                                        @GetTrendIcon(trend) @trend.Statistics.Trend
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="chart-@trend.ParameterName.Replace(" ", "")" style="max-height: 250px;"></canvas>
+
+                                <!-- Statistics -->
+                                <div class="row g-3 mt-3 pt-3 border-top">
+                                    <div class="col-4 text-center">
+                                        <small class="text-muted d-block">Current</small>
+                                        <strong class="@(trend.Statistics.IsInIdealRange ? "text-success" : "text-danger")">
+                                            @trend.Statistics.CurrentValue?.ToString("F2")@trend.Unit
+                                        </strong>
+                                    </div>
+                                    <div class="col-4 text-center">
+                                        <small class="text-muted d-block">Average</small>
+                                        <strong>@trend.Statistics.Average?.ToString("F2")@trend.Unit</strong>
+                                    </div>
+                                    <div class="col-4 text-center">
+                                        <small class="text-muted d-block">Range</small>
+                                        <strong class="small">@trend.Statistics.Min?.ToString("F2") -
+                                            @trend.Statistics.Max?.ToString("F2")</strong>
+                                    </div>
+                                </div>
+
+                                @if (trend.IdealMin.HasValue || trend.IdealMax.HasValue)
+                                {
+                                    <div class="mt-3 pt-3 border-top">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <small class="text-muted">
+                                                <i class="bi bi-info-circle me-1"></i>
+                                                Ideal Range:
+                                                @if (trend.IdealMin.HasValue && trend.IdealMax.HasValue)
+                                                {
+                                                    <span>@trend.IdealMin.Value.ToString("F2") -
+                                                        @trend.IdealMax.Value.ToString("F2")@trend.Unit</span>
+                                                }
+                                                else if (trend.IdealMax.HasValue)
+                                                {
+                                                    <span>≤ @trend.IdealMax.Value.ToString("F2")@trend.Unit</span>
+                                                }
+                                            </small>
+                                            @if (trend.Statistics.DaysAboveIdeal > 0 || trend.Statistics.DaysBelowIdeal > 0)
+                                            {
+                                                <small class="text-warning">
+                                                    <i class="bi bi-exclamation-circle me-1"></i>
+                                                    @(trend.Statistics.DaysAboveIdeal + trend.Statistics.DaysBelowIdeal) readings out of
+                                                    range
+                                                </small>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Detailed Statistics Table -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-table text-primary me-2"></i>
+                        Detailed Statistics
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="px-4 py-3">Parameter</th>
+                                    <th class="py-3">Current</th>
+                                    <th class="py-3">Average</th>
+                                    <th class="py-3">Min / Max</th>
+                                    <th class="py-3">Std Dev</th>
+                                    <th class="py-3">Median</th>
+                                    <th class="py-3">Trend</th>
+                                    <th class="py-3 text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var trend in viewModel.ParameterTrends.Where(t => t.Statistics.TotalReadings > 0))
+                                {
+                                    <tr>
+                                        <td class="px-4 py-3 fw-semibold">@trend.ParameterName</td>
+                                        <td class="py-3">
+                                            <span
+                                                class="@(trend.Statistics.IsInIdealRange ? "text-success" : "text-danger") fw-bold">
+                                                @trend.Statistics.CurrentValue?.ToString("F2")@trend.Unit
+                                            </span>
+                                        </td>
+                                        <td class="py-3">@trend.Statistics.Average?.ToString("F2")@trend.Unit</td>
+                                        <td class="py-3">
+                                            <small>
+                                                @trend.Statistics.Min?.ToString("F2") / @trend.Statistics.Max?.ToString("F2")
+                                            </small>
+                                        </td>
+                                        <td class="py-3">@trend.Statistics.StandardDeviation?.ToString("F2")</td>
+                                        <td class="py-3">@trend.Statistics.Median?.ToString("F2")@trend.Unit</td>
+                                        <td class="py-3">
+                                            <span class="badge @GetTrendBadgeClass(trend)">
+                                                @GetTrendIcon(trend) @trend.Statistics.Trend
+                                            </span>
+                                            @if (trend.Statistics.TrendPercentage.HasValue)
+                                            {
+                                                <small class="text-muted d-block">
+                                                    @(trend.Statistics.TrendPercentage > 0 ? "+" :
+                                                                                        "")@trend.Statistics.TrendPercentage.Value.ToString("F1")%
+                                                </small>
+                                            }
+                                        </td>
+                                        <td class="py-3 text-center">
+                                            @if (trend.Statistics.IsInIdealRange)
+                                            {
+                                                <span class="badge bg-success">
+                                                    <i class="bi bi-check-circle"></i> Good
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger">
+                                                    <i class="bi bi-exclamation-circle"></i> Alert
+                                                </span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int TankId { get; set; }
+
+    private WaterParameterTrendsViewModel? viewModel;
+    private bool isLoading = true;
+    private string userId = string.Empty;
+    private bool hasRendered = false;
+
+    private DateTime startDate = DateTime.UtcNow.AddMonths(-3);
+    private DateTime endDate = DateTime.UtcNow;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user?.Identity?.IsAuthenticated == true)
+            {
+                userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    await LoadTrends();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading trends: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            hasRendered = true;
+        }
+
+        if (hasRendered && viewModel?.ParameterTrends != null && viewModel.ParameterTrends.Any())
+        {
+            await RenderCharts();
+        }
+    }
+
+    private async Task LoadTrends()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            viewModel = await WaterTestService.GetParameterTrendsAsync(TankId, userId, startDate, endDate);
+
+            if (hasRendered)
+            {
+                await RenderCharts();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading trends: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RenderCharts()
+    {
+        if (viewModel == null) return;
+
+        try
+        {
+            foreach (var trend in viewModel.ParameterTrends.Where(t => t.Statistics.TotalReadings > 0))
+            {
+                var chartData = new
+                {
+                    labels = trend.DataPoints.Select(dp => dp.Date.ToString("MMM dd, yyyy")).ToArray(),
+                    values = trend.DataPoints.Select(dp => dp.Value).ToArray(),
+                    idealMin = trend.IdealMin,
+                    idealMax = trend.IdealMax,
+                    parameterName = trend.ParameterName,
+                    unit = trend.Unit
+                };
+
+                await JSRuntime.InvokeVoidAsync("renderParameterTrendChart",
+                $"chart-{trend.ParameterName.Replace(" ", "")}",
+                chartData);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error rendering charts: {ex.Message}");
+        }
+    }
+
+    private void SetDateRange(int days)
+    {
+        endDate = DateTime.UtcNow;
+        startDate = endDate.AddDays(-days);
+    }
+
+    private void SetAllTime()
+    {
+        endDate = DateTime.UtcNow;
+        startDate = viewModel?.Tank?.StartDate ?? DateTime.UtcNow.AddYears(-1);
+    }
+
+    private int GetParametersInRange()
+    {
+        return viewModel?.ParameterTrends.Count(t => t.Statistics.IsInIdealRange) ?? 0;
+    }
+
+    private string GetTrendBadgeClass(WaterParameterTrendViewModel trend)
+    {
+        return trend.Statistics.Trend switch
+        {
+            TrendDirection.Stable => "bg-success",
+            TrendDirection.Rising => "bg-warning",
+            TrendDirection.Falling => "bg-info",
+            TrendDirection.Fluctuating => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetTrendIconColor(WaterParameterTrendViewModel trend)
+    {
+        if (!trend.Statistics.IsInIdealRange)
+            return "text-danger";
+
+        return trend.Statistics.Trend switch
+        {
+            TrendDirection.Stable => "text-success",
+            TrendDirection.Rising => "text-warning",
+            TrendDirection.Falling => "text-info",
+            TrendDirection.Fluctuating => "text-danger",
+            _ => "text-secondary"
+        };
+    }
+
+    private string GetTrendIcon(WaterParameterTrendViewModel trend)
+    {
+        return trend.Statistics.Trend switch
+        {
+            TrendDirection.Stable => "→",
+            TrendDirection.Rising => "↑",
+            TrendDirection.Falling => "↓",
+            TrendDirection.Fluctuating => "↕",
+            _ => "•"
+        };
+    }
+}

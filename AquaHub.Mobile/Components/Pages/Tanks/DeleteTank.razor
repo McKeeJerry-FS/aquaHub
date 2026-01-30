@@ -1,0 +1,488 @@
+﻿@page "/tanks/delete/{Id:int}"
+@using AquaHub.Shared.Services.Interfaces
+@using AquaHub.Shared.Models
+@using AquaHub.Shared.Models.Enums
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@inject ITankService TankService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize]
+
+<PageTitle>Delete Tank</PageTitle>
+
+<div class="delete-tank-page">
+    <!-- Header Section -->
+    <div class="page-header">
+        <div class="container">
+            <div class="py-4">
+                <h1 class="display-5 fw-bold mb-2">
+                    <i class="bi bi-trash me-2"></i>
+                    Delete Tank
+                </h1>
+                <p class="mb-0">Permanently remove this aquarium from your collection</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container py-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                @if (isLoading)
+                {
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="text-muted mt-3">Loading tank details...</p>
+                    </div>
+                }
+                else if (tank == null)
+                {
+                    <div class="alert-card alert-danger-card">
+                        <i class="bi bi-exclamation-triangle-fill display-4 mb-3"></i>
+                        <h4>Tank Not Found</h4>
+                        <p>The tank you're looking for doesn't exist or you don't have permission to delete it.</p>
+                        <a href="/tanks" class="btn btn-primary">
+                            <i class="bi bi-arrow-left me-2"></i>
+                            Back to Tanks
+                        </a>
+                    </div>
+                }
+                else
+                {
+                    <!-- Warning Alert -->
+                    <div class="warning-banner">
+                        <div class="warning-icon">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                        </div>
+                        <div class="warning-content">
+                            <h4 class="mb-2">Warning: This Action Cannot Be Undone</h4>
+                            <p class="mb-0">Deleting this tank will permanently remove all associated data including water
+                                tests, livestock records, equipment, and maintenance logs.</p>
+                        </div>
+                    </div>
+
+                    <!-- Tank Details Card -->
+                    <div class="details-card">
+                        <div class="details-card-header">
+                            <i class="bi bi-droplet-fill me-2"></i>
+                            Tank Details
+                        </div>
+
+                        <div class="details-card-body">
+                            @if (!string.IsNullOrEmpty(tank.ImagePath))
+                            {
+                                <div class="tank-image-container mb-4">
+                                    <img src="@tank.ImagePath" alt="@tank.Name" class="tank-image" />
+                                </div>
+                            }
+
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <div class="info-label">
+                                        <i class="bi bi-tag text-primary"></i>
+                                        Tank Name
+                                    </div>
+                                    <div class="info-value">@tank.Name</div>
+                                </div>
+
+                                <div class="info-item">
+                                    <div class="info-label">
+                                        <i class="bi bi-droplet-half text-primary"></i>
+                                        Volume
+                                    </div>
+                                    <div class="info-value">@tank.VolumeGallons gallons</div>
+                                </div>
+
+                                <div class="info-item">
+                                    <div class="info-label">
+                                        <i class="bi bi-water text-primary"></i>
+                                        Type
+                                    </div>
+                                    <div class="info-value">@tank.Type</div>
+                                </div>
+
+                                <div class="info-item">
+                                    <div class="info-label">
+                                        <i class="bi bi-calendar3 text-primary"></i>
+                                        Start Date
+                                    </div>
+                                    <div class="info-value">@tank.StartDate.ToShortDateString()</div>
+                                </div>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(tank.Notes))
+                            {
+                                <div class="notes-section">
+                                    <div class="info-label mb-2">
+                                        <i class="bi bi-journal-text text-primary"></i>
+                                        Notes
+                                    </div>
+                                    <p class="mb-0">@tank.Notes</p>
+                                </div>
+                            }
+
+                            @if (tank.WaterTests.Count > 0 || tank.Livestock.Count > 0 ||
+                                                    tank.Equipment.Count > 0 || tank.MaintenanceLogs.Count > 0)
+                            {
+                                <div class="data-warning">
+                                    <h6 class="mb-3">
+                                        <i class="bi bi-database-fill me-2"></i>
+                                        Associated Data That Will Be Deleted
+                                    </h6>
+                                    <div class="row g-3">
+                                        @if (tank.WaterTests.Count > 0)
+                                        {
+                                            <div class="col-6">
+                                                <div class="data-count-box">
+                                                    <div class="data-count">@tank.WaterTests.Count</div>
+                                                    <div class="data-label">Water Tests</div>
+                                                </div>
+                                            </div>
+                                        }
+                                        @if (tank.Livestock.Count > 0)
+                                        {
+                                            <div class="col-6">
+                                                <div class="data-count-box">
+                                                    <div class="data-count">@tank.Livestock.Count</div>
+                                                    <div class="data-label">Livestock</div>
+                                                </div>
+                                            </div>
+                                        }
+                                        @if (tank.Equipment.Count > 0)
+                                        {
+                                            <div class="col-6">
+                                                <div class="data-count-box">
+                                                    <div class="data-count">@tank.Equipment.Count</div>
+                                                    <div class="data-label">Equipment</div>
+                                                </div>
+                                            </div>
+                                        }
+                                        @if (tank.MaintenanceLogs.Count > 0)
+                                        {
+                                            <div class="col-6">
+                                                <div class="data-count-box">
+                                                    <div class="data-count">@tank.MaintenanceLogs.Count</div>
+                                                    <div class="data-label">Maintenance Logs</div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        <div class="details-card-footer">
+                            <button class="btn btn-danger btn-lg" @onclick="HandleDelete" disabled="@isDeleting">
+                                @if (isDeleting)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    <span>Deleting...</span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-trash-fill me-2"></i>
+                                    <span>Yes, Delete This Tank</span>
+                                }
+                            </button>
+                            <a href="/tanks" class="btn btn-outline-secondary btn-lg">
+                                <i class="bi bi-x-circle me-2"></i>
+                                Cancel
+                            </a>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger mt-3 shadow-sm">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            @errorMessage
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .delete-tank-page {
+        background: linear-gradient(180deg, #ffebee 0%, #ffffff 100%);
+        min-height: 100vh;
+    }
+
+    .page-header {
+        background: linear-gradient(135deg, #e53935 0%, #c62828 100%);
+        color: white;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .page-header h1 {
+        color: white;
+    }
+
+    .warning-banner {
+        background: linear-gradient(135deg, #ff5252 0%, #f44336 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 12px rgba(229, 57, 53, 0.3);
+    }
+
+    .warning-icon {
+        font-size: 3rem;
+        flex-shrink: 0;
+    }
+
+    .warning-content h4 {
+        color: white;
+        font-weight: 700;
+    }
+
+    .details-card {
+        background: white;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border: 3px solid #ffcdd2;
+    }
+
+    .details-card-header {
+        background: linear-gradient(135deg, #ef5350 0%, #e53935 100%);
+        color: white;
+        padding: 1.5rem;
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+
+    .details-card-body {
+        padding: 2rem;
+    }
+
+    .tank-image-container {
+        text-align: center;
+        padding: 1rem;
+        background: #f5f5f5;
+        border-radius: 12px;
+    }
+
+    .tank-image {
+        max-height: 300px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .info-item {
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #0288d1;
+    }
+
+    .info-label {
+        font-size: 0.85rem;
+        color: #546e7a;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .info-value {
+        font-size: 1.1rem;
+        color: #01579b;
+        font-weight: 600;
+    }
+
+    .notes-section {
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #0288d1;
+        margin-bottom: 1.5rem;
+    }
+
+    .data-warning {
+        background: #fff3e0;
+        border: 2px solid #ffb74d;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-top: 1.5rem;
+    }
+
+    .data-warning h6 {
+        color: #e65100;
+        font-weight: 700;
+    }
+
+    .data-count-box {
+        text-align: center;
+        padding: 1rem;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .data-count {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #d32f2f;
+    }
+
+    .data-label {
+        font-size: 0.9rem;
+        color: #546e7a;
+        margin-top: 0.25rem;
+    }
+
+    .details-card-footer {
+        padding: 1.5rem 2rem;
+        background: #f5f5f5;
+        border-top: 2px solid #e0e0e0;
+        display: flex;
+        gap: 1rem;
+    }
+
+    .alert-card {
+        text-align: center;
+        padding: 3rem;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .alert-danger-card {
+        border-left: 4px solid #dc3545;
+    }
+
+    .alert-danger-card i {
+        color: #dc3545;
+    }
+
+    .btn-danger {
+        background: linear-gradient(135deg, #f44336 0%, #c62828 100%);
+        border: none;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+        background: linear-gradient(135deg, #e53935 0%, #b71c1c 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #0288d1 0%, #01579b 100%);
+        border: none;
+    }
+
+    .btn-outline-secondary {
+        border: 2px solid #78909c;
+        color: #78909c;
+    }
+
+    .btn-outline-secondary:hover {
+        background: #78909c;
+        border-color: #78909c;
+        color: white;
+    }
+
+    @@media (max-width: 768px) {
+        .warning-banner {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .details-card-body {
+            padding: 1.5rem;
+        }
+
+        .details-card-footer {
+            flex-direction: column;
+        }
+
+        .details-card-footer .btn {
+            width: 100%;
+        }
+
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Tank? tank;
+    private bool isLoading = true;
+    private bool isDeleting = false;
+    private string? errorMessage;
+    private string? userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                await LoadTank();
+            }
+        }
+    }
+
+    private async Task LoadTank()
+    {
+        if (string.IsNullOrEmpty(userId)) return;
+
+        isLoading = true;
+        tank = await TankService.GetTankByIdAsync(Id, userId);
+        isLoading = false;
+    }
+
+    private async Task HandleDelete()
+    {
+        if (tank == null || string.IsNullOrEmpty(userId)) return;
+
+        isDeleting = true;
+        errorMessage = null;
+
+        try
+        {
+            var success = await TankService.DeleteTankAsync(tank.Id, userId);
+
+            if (success)
+            {
+                Navigation.NavigateTo("/tanks");
+            }
+            else
+            {
+                errorMessage = "Failed to delete the tank. Please try again.";
+                isDeleting = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred while deleting: {ex.Message}";
+            isDeleting = false;
+        }
+    }
+}

@@ -1,5 +1,5 @@
 using System;
-using AquaHub.Services.Interfaces;
+using AquaHub.Shared.Services.Interfaces;
 
 namespace AquaHub.Services;
 

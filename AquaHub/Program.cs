@@ -5,10 +5,11 @@ using Npgsql;
 using Npgsql.EntityFrameworkCore.PostgreSQL;
 using AquaHub.Components;
 using AquaHub.Components.Account;
-using AquaHub.Data;
-using AquaHub.Models;
-using AquaHub.Services.Interfaces;
-using AquaHub.Services;
+using AquaHub.Shared.Data;
+using AquaHub.Shared.Models;
+using AquaHub.Shared.Services.Interfaces;
+using AquaHub.Shared.Services;
+using AquaHub.Services;  // Add this line for web-specific services
 
 var builder = WebApplication.CreateBuilder(args);
 

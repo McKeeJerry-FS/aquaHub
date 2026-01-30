@@ -1,0 +1,559 @@
+@page "/livestock/{LivestockId:int}/growth"
+@using AquaHub.Shared.Models
+@using AquaHub.Shared.Services.Interfaces
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@inject IGrowthRecordService GrowthRecordService
+@inject ILivestockService LivestockService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JSRuntime
+@attribute [Authorize]
+
+<PageTitle>Growth Tracker - @livestockName</PageTitle>
+
+<div class="growth-tracker-page">
+    <!-- Header -->
+    <div class="page-header bg-gradient">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center py-4">
+                <div>
+                    <h1 class="display-6 fw-bold mb-2">
+                        <i class="bi bi-graph-up text-success me-2"></i>
+                        Growth Tracker
+                    </h1>
+                    <p class="text-muted mb-0">@livestockName</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-success btn-lg shadow-sm" @onclick="ShowAddModal">
+                        <i class="bi bi-plus-circle me-2"></i> Log Measurement
+                    </button>
+                    <button class="btn btn-secondary btn-lg shadow-sm" @onclick="GoBack">
+                        <i class="bi bi-arrow-left me-2"></i> Back
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container py-4">
+        @if (isLoading)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        }
+        else
+        {
+            @if (statistics != null)
+            {
+                <!-- Statistics Cards -->
+                <div class="row g-4 mb-4">
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="icon-box bg-primary bg-opacity-10 text-primary me-3">
+                                        <i class="bi bi-calendar-check"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="text-muted mb-0">Tracking Since</h6>
+                                        <h4 class="mb-0">@statistics.FirstMeasurement?.ToString("MMM d, yyyy")</h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="icon-box bg-info bg-opacity-10 text-info me-3">
+                                        <i class="bi bi-rulers"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="text-muted mb-0">Total Measurements</h6>
+                                        <h4 class="mb-0">@statistics.TotalMeasurements</h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (statistics.LengthGrowth.HasValue)
+                    {
+                        <div class="col-md-3">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <div class="icon-box bg-success bg-opacity-10 text-success me-3">
+                                            <i class="bi bi-arrow-up-right"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="text-muted mb-0">Length Growth</h6>
+                                            <h4 class="mb-0">+@statistics.LengthGrowth.Value.ToString("F2")"</h4>
+                                            @if (statistics.LengthGrowthPercentage.HasValue)
+                                            {
+                                                <small
+                                                    class="text-success">+@statistics.LengthGrowthPercentage.Value.ToString("F1")%</small>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    @if (statistics.WeightGrowth.HasValue)
+                    {
+                        <div class="col-md-3">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <div class="icon-box bg-warning bg-opacity-10 text-warning me-3">
+                                            <i class="bi bi-arrow-up-right"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="text-muted mb-0">Weight Growth</h6>
+                                            <h4 class="mb-0">+@statistics.WeightGrowth.Value.ToString("F1")g</h4>
+                                            @if (statistics.WeightGrowthPercentage.HasValue)
+                                            {
+                                                <small
+                                                    class="text-warning">+@statistics.WeightGrowthPercentage.Value.ToString("F1")%</small>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(statistics.HealthTrend))
+                    {
+                        <div class="col-md-3">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <div class="icon-box @GetHealthTrendClass(statistics.HealthTrend) me-3">
+                                            <i class="bi @GetHealthTrendIcon(statistics.HealthTrend)"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="text-muted mb-0">Health Trend</h6>
+                                            <h4 class="mb-0">@statistics.HealthTrend</h4>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Current vs Initial -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Growth Progress</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            @if (statistics.InitialLength.HasValue && statistics.CurrentLength.HasValue)
+                            {
+                                <div class="col-md-6 mb-3">
+                                    <div class="progress-item">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span class="fw-bold">Length</span>
+                                            <span>@statistics.InitialLength.Value.ToString("F2")" →
+                                                @statistics.CurrentLength.Value.ToString("F2")"</span>
+                                        </div>
+                                        <div class="progress" style="height: 25px;">
+                                            <div class="progress-bar bg-success" role="progressbar"
+                                                style="width: @((statistics.CurrentLength.Value / (statistics.CurrentLength.Value + statistics.InitialLength.Value)) * 100)%">
+                                                @(statistics.LengthGrowth?.ToString("F2") ?? "0.00")" growth
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+
+                            @if (statistics.InitialWeight.HasValue && statistics.CurrentWeight.HasValue)
+                            {
+                                <div class="col-md-6 mb-3">
+                                    <div class="progress-item">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span class="fw-bold">Weight</span>
+                                            <span>@statistics.InitialWeight.Value.ToString("F1")g →
+                                                @statistics.CurrentWeight.Value.ToString("F1")g</span>
+                                        </div>
+                                        <div class="progress" style="height: 25px;">
+                                            <div class="progress-bar bg-warning" role="progressbar"
+                                                style="width: @((statistics.CurrentWeight.Value / (statistics.CurrentWeight.Value + statistics.InitialWeight.Value)) * 100)%">
+                                                @(statistics.WeightGrowth?.ToString("F1") ?? "0.0")g growth
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+
+                            @if (statistics.InitialDiameter.HasValue && statistics.CurrentDiameter.HasValue)
+                            {
+                                <div class="col-md-6 mb-3">
+                                    <div class="progress-item">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span class="fw-bold">Diameter</span>
+                                            <span>@statistics.InitialDiameter.Value.ToString("F2")" →
+                                                @statistics.CurrentDiameter.Value.ToString("F2")"</span>
+                                        </div>
+                                        <div class="progress" style="height: 25px;">
+                                            <div class="progress-bar bg-info" role="progressbar"
+                                                style="width: @((statistics.CurrentDiameter.Value / (statistics.CurrentDiameter.Value + statistics.InitialDiameter.Value)) * 100)%">
+                                                @(statistics.DiameterGrowth?.ToString("F2") ?? "0.00")" growth
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+
+                            @if (statistics.InitialHeight.HasValue && statistics.CurrentHeight.HasValue)
+                            {
+                                <div class="col-md-6 mb-3">
+                                    <div class="progress-item">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span class="fw-bold">Height</span>
+                                            <span>@statistics.InitialHeight.Value.ToString("F2")" →
+                                                @statistics.CurrentHeight.Value.ToString("F2")"</span>
+                                        </div>
+                                        <div class="progress" style="height: 25px;">
+                                            <div class="progress-bar bg-primary" role="progressbar"
+                                                style="width: @((statistics.CurrentHeight.Value / (statistics.CurrentHeight.Value + statistics.InitialHeight.Value)) * 100)%">
+                                                @(statistics.HeightGrowth?.ToString("F2") ?? "0.00")" growth
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Growth Charts -->
+            @if (records.Any())
+            {
+                <div class="row mb-4">
+                    @if (records.Any(r => r.LengthInches.HasValue) || records.Any(r => r.WeightGrams.HasValue))
+                    {
+                        <div class="col-12">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-header bg-white">
+                                    <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Growth Chart</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div style="height: 400px;">
+                                        <canvas id="growthChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    @if (records.Any(r => r.DiameterInches.HasValue || r.HeightInches.HasValue))
+                    {
+                        <div class="col-12 mt-4">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-header bg-white">
+                                    <h5 class="mb-0"><i class="bi bi-arrows-angle-expand me-2"></i>Size Chart (Coral/Plant)</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div style="height: 400px;">
+                                        <canvas id="coralGrowthChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
+            <!-- Measurement History -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Measurement History</h5>
+                </div>
+                <div class="card-body">
+                    @if (!records.Any())
+                    {
+                        <div class="text-center py-5">
+                            <i class="bi bi-graph-up display-1 text-muted mb-3"></i>
+                            <h4 class="text-muted">No measurements yet</h4>
+                            <p class="text-muted">Start tracking growth by logging your first measurement!</p>
+                            <button class="btn btn-primary" @onclick="ShowAddModal">
+                                <i class="bi bi-plus-circle me-2"></i> Log First Measurement
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Length</th>
+                                        <th>Weight</th>
+                                        <th>Diameter</th>
+                                        <th>Height</th>
+                                        <th>Health</th>
+                                        <th>Color</th>
+                                        <th>Notes</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var record in records)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <span class="fw-bold">@record.MeasurementDate.ToString("MMM d, yyyy")</span>
+                                                <br />
+                                                <small class="text-muted">@GetDaysAgo(record.MeasurementDate)</small>
+                                            </td>
+                                            <td>@(record.LengthInches.HasValue ? $"{record.LengthInches.Value:F2}\"" : "-")</td>
+                                            <td>@(record.WeightGrams.HasValue ? $"{record.WeightGrams.Value:F1}g" : "-")</td>
+                                            <td>@(record.DiameterInches.HasValue ? $"{record.DiameterInches.Value:F2}\"" : "-")</td>
+                                            <td>@(record.HeightInches.HasValue ? $"{record.HeightInches.Value:F2}\"" : "-")</td>
+                                            <td>
+                                                @if (!string.IsNullOrEmpty(record.HealthCondition))
+                                                {
+                                                    <span class="badge @GetHealthBadgeClass(record.HealthCondition)">
+                                                        @record.HealthCondition
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span>-</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (!string.IsNullOrEmpty(record.ColorVibrancy))
+                                                {
+                                                    <span class="badge @GetColorBadgeClass(record.ColorVibrancy)">
+                                                        @record.ColorVibrancy
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span>-</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (!string.IsNullOrEmpty(record.Notes))
+                                                {
+                                                    <span class="text-truncate d-inline-block" style="max-width: 200px;"
+                                                        title="@record.Notes">
+                                                        @record.Notes
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span>-</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-sm btn-danger" @onclick="() => DeleteRecord(record.Id)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<AddGrowthRecord @ref="addGrowthRecordModal" LivestockId="@LivestockId" UserId="@userId" OnRecordAdded="@LoadData" />
+
+@code {
+    [Parameter]
+    public int LivestockId { get; set; }
+
+    private string userId = string.Empty;
+    private string livestockName = string.Empty;
+    private List<GrowthRecord> records = new();
+    private GrowthStatistics? statistics;
+    private bool isLoading = true;
+    private AddGrowthRecord? addGrowthRecordModal;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            // Get livestock info
+            var livestock = await LivestockService.GetLivestockByIdAsync(LivestockId, userId);
+            livestockName = livestock?.Name ?? "Unknown";
+
+            // Get growth records
+            records = await GrowthRecordService.GetGrowthRecordsForLivestockAsync(LivestockId, userId);
+
+            // Get statistics
+            statistics = await GrowthRecordService.GetGrowthStatisticsAsync(LivestockId, userId);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+
+            // Render charts after data is loaded
+            await RenderCharts();
+        }
+    }
+
+    private async Task RenderCharts()
+    {
+        if (!records.Any()) return;
+
+        try
+        {
+            // Prepare data for charts
+            var orderedRecords = records.OrderBy(r => r.MeasurementDate).ToList();
+
+            // Growth chart (length and weight)
+            if (orderedRecords.Any(r => r.LengthInches.HasValue || r.WeightGrams.HasValue))
+            {
+                var lengthData = orderedRecords.Select(r => new
+                {
+                    date = r.MeasurementDate.ToString("yyyy-MM-dd"),
+                    length = r.LengthInches
+                }).ToArray();
+
+                var weightData = orderedRecords.Select(r => new
+                {
+                    date = r.MeasurementDate.ToString("yyyy-MM-dd"),
+                    weight = r.WeightGrams
+                }).ToArray();
+
+                await JSRuntime.InvokeVoidAsync("growthCharts.createCombinedChart", "growthChart", lengthData, weightData);
+            }
+
+            // Coral growth chart (diameter and height)
+            if (orderedRecords.Any(r => r.DiameterInches.HasValue || r.HeightInches.HasValue))
+            {
+                var coralData = orderedRecords.Select(r => new
+                {
+                    date = r.MeasurementDate.ToString("yyyy-MM-dd"),
+                    diameter = r.DiameterInches,
+                    height = r.HeightInches
+                }).ToArray();
+
+                await JSRuntime.InvokeVoidAsync("growthCharts.createCoralGrowthChart", "coralGrowthChart", coralData);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error rendering charts: {ex.Message}");
+        }
+    }
+
+    private async Task ShowAddModal()
+    {
+        if (addGrowthRecordModal != null)
+        {
+            await addGrowthRecordModal.ShowModal();
+        }
+    }
+
+    private async Task DeleteRecord(int recordId)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this measurement?"))
+        {
+            await GrowthRecordService.DeleteGrowthRecordAsync(recordId, userId);
+            await LoadData();
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/livestock");
+    }
+
+    private string GetDaysAgo(DateTime date)
+    {
+        var days = (DateTime.Today - date.Date).Days;
+        return days == 0 ? "Today" : days == 1 ? "Yesterday" : $"{days} days ago";
+    }
+
+    private string GetHealthBadgeClass(string? health) => health?.ToLower() switch
+    {
+        "excellent" => "bg-success",
+        "good" => "bg-info",
+        "fair" => "bg-warning",
+        "poor" => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    private string GetColorBadgeClass(string? color) => color?.ToLower() switch
+    {
+        "vibrant" => "bg-success",
+        "normal" => "bg-info",
+        "faded" => "bg-warning",
+        "pale" => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    private string GetHealthTrendClass(string trend) => trend.ToLower() switch
+    {
+        "improving" => "bg-success bg-opacity-10 text-success",
+        "stable" => "bg-info bg-opacity-10 text-info",
+        "declining" => "bg-danger bg-opacity-10 text-danger",
+        _ => "bg-secondary bg-opacity-10 text-secondary"
+    };
+
+    private string GetHealthTrendIcon(string trend) => trend.ToLower() switch
+    {
+        "improving" => "bi-arrow-up-circle",
+        "stable" => "bi-dash-circle",
+        "declining" => "bi-arrow-down-circle",
+        _ => "bi-question-circle"
+    };
+}
+
+<style>
+    .icon-box {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+
+    .progress-item {
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        border-bottom: 2px solid #dee2e6;
+    }
+</style>

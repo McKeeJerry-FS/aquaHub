@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
-using AquaHub.Models;
+using AquaHub.Shared.Models;
 
 namespace AquaHub.Components.Account;
 

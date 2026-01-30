@@ -480,3 +480,52 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# MAUI / Xamarin specific
+*.apk
+*.aab
+*.ipa
+*.dSYM.zip
+*.dSYM
+*.xcarchive
+
+# MAUI Generated Files
+**/[Aa]ndroid/**/[Rr]esource.designer.cs
+**/[Aa]ndroid/**/[Rr]esources/[Rr]esource.designer.cs
+**/[Ii]OS/**/*.storyboard.cs
+
+# Platform-specific binaries
+**/AppPackages/
+**/BundleArtifacts/
+**/Package.StoreAssociation.xml
+*.appx
+*.appxbundle
+*.appxupload
+*.msix
+*.msixbundle
+*.msixupload
+
+# macOS
+.DS_Store
+*.dmg
+
+# Android
+*.apk
+*.ap_
+*.dex
+local.properties
+
+# iOS
+*.ipa
+*.mobileprovision
+*.xcworkspace
+!default.xcworkspace
+
+# User-specific MAUI files
+**/appcenter-post-build.sh
+**/appcenter-pre-build.sh
+
+# SQLite databases (if you don't want to commit local dev databases)
+*.db
+*.db-shm
+*.db-wal

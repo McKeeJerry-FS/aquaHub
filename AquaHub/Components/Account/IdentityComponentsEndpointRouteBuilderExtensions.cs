@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
 using AquaHub.Components.Account.Pages;
 using AquaHub.Components.Account.Pages.Manage;
-using AquaHub.Models;
+using AquaHub.Shared.Models;
 
 namespace Microsoft.AspNetCore.Routing;
 

@@ -1,0 +1,376 @@
+﻿@page "/tanks/edit/{Id:int}"
+@using AquaHub.Shared.Services.Interfaces
+@using AquaHub.Shared.Models
+@using AquaHub.Shared.Models.Enums
+@inject ITankService TankService
+@inject IFileUploadService FileUploadService
+@inject NavigationManager Navigation
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize]
+
+
+<PageTitle>Edit Tank</PageTitle>
+
+<div class="edit-tank-page">
+    <!-- Header Section -->
+    <div class="page-header">
+        <div class="container">
+            <div class="py-4">
+                <h1 class="display-5 fw-bold mb-2">
+                    <i class="bi bi-pencil-square me-2"></i>
+                    Edit Tank
+                </h1>
+                <p class="mb-0">Update your aquarium information</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container py-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                @if (isLoading)
+                {
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="text-muted mt-3">Loading tank details...</p>
+                    </div>
+                }
+                else if (tank == null)
+                {
+                    <div class="alert-card alert-danger-card">
+                        <i class="bi bi-exclamation-triangle-fill display-4 mb-3"></i>
+                        <h4>Tank Not Found</h4>
+                        <p>The tank you're looking for doesn't exist.</p>
+                        <a href="/tanks" class="btn btn-primary">
+                            <i class="bi bi-arrow-left me-2"></i>
+                            Back to Tanks
+                        </a>
+                    </div>
+                }
+                else
+                {
+                    <EditForm Model="@tank" OnValidSubmit="@HandleSubmit" FormName="editTankForm">
+                        <DataAnnotationsValidator />
+
+                        <div class="form-card">
+                            <div class="form-card-header">
+                                <i class="bi bi-droplet-fill me-2"></i>
+                                @tank.Name
+                            </div>
+
+                            <div class="form-card-body">
+                                <!-- Tank Name -->
+                                <div class="form-group">
+                                    <label for="name" class="form-label">
+                                        <i class="bi bi-tag text-primary me-2"></i>
+                                        Tank Name <span class="text-danger">*</span>
+                                    </label>
+                                    <InputText id="name" @bind-Value="tank.Name" class="form-control form-control-lg"
+                                        placeholder="e.g., Living Room Reef, 75g Planted Tank" />
+                                    <ValidationMessage For="@(() => tank.Name)" class="text-danger small mt-1" />
+                                </div>
+
+                                <!-- Tank Image -->
+                                <div class="form-group">
+                                    <label for="image" class="form-label">
+                                        <i class="bi bi-image text-primary me-2"></i>
+                                        Tank Image
+                                    </label>
+
+                                    @if (!string.IsNullOrEmpty(currentImagePath) && !removeCurrentImage)
+                                    {
+                                        <div class="current-image-container mb-3">
+                                            <img src="@currentImagePath" alt="Current tank image" class="current-image" />
+                                            <button type="button" class="btn btn-sm btn-outline-danger mt-2"
+                                                @onclick="RemoveCurrentImage">
+                                                <i class="bi bi-trash"></i> Remove Current Image
+                                            </button>
+                                        </div>
+                                    }
+                                    else if (removeCurrentImage)
+                                    {
+                                        <div class="alert alert-warning py-2 mb-3">
+                                            <i class="bi bi-exclamation-triangle me-2"></i>
+                                            <small>Current image will be removed when you save.</small>
+                                            <button type="button" class="btn btn-sm btn-link"
+                                                @onclick="UndoRemoveImage">Undo</button>
+                                        </div>
+                                    }
+
+                                    <InputFile id="image" OnChange="HandleImageSelected" class="form-control"
+                                        accept="image/*" />
+                                    <small class="form-text text-muted">
+                                        @if (string.IsNullOrEmpty(currentImagePath) || removeCurrentImage)
+                                        {
+                                            <span>Upload a new image. Max size: 5MB.</span>
+                                        }
+                                        else
+                                        {
+                                            <span>Upload a new image to replace the current one. Max size: 5MB.</span>
+                                        }
+                                    </small>
+
+                                    @if (!string.IsNullOrEmpty(newImagePreview))
+                                    {
+                                        <div class="image-preview-container mt-3">
+                                            <p class="mb-2 fw-bold">New Image Preview:</p>
+                                            <img src="@newImagePreview" alt="Preview" class="image-preview" />
+                                        </div>
+                                    }
+                                </div>
+
+                                <!-- Volume and Type Row -->
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="volume" class="form-label">
+                                                <i class="bi bi-droplet-half text-primary me-2"></i>
+                                                Volume (Gallons) <span class="text-danger">*</span>
+                                            </label>
+                                            <InputNumber id="volume" @bind-Value="tank.VolumeGallons" class="form-control"
+                                                placeholder="e.g., 55" />
+                                            <ValidationMessage For="@(() => tank.VolumeGallons)"
+                                                class="text-danger small mt-1" />
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="type" class="form-label">
+                                                <i class="bi bi-water text-primary me-2"></i>
+                                                Tank Type <span class="text-danger">*</span>
+                                            </label>
+                                            <InputSelect id="type" @bind-Value="tank.Type" class="form-select">
+                                                @foreach (var type in Enum.GetValues<AquariumType>())
+                                                {
+                                                    <option value="@type">@type</option>
+                                                }
+                                            </InputSelect>
+                                            <ValidationMessage For="@(() => tank.Type)" class="text-danger small mt-1" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Start Date -->
+                                <div class="form-group">
+                                    <label for="startDate" class="form-label">
+                                        <i class="bi bi-calendar3 text-primary me-2"></i>
+                                        Start Date <span class="text-danger">*</span>
+                                    </label>
+                                    <InputDate id="startDate" @bind-Value="tank.StartDate" class="form-control" />
+                                    <ValidationMessage For="@(() => tank.StartDate)" class="text-danger small mt-1" />
+                                </div>
+
+                                <!-- Notes -->
+                                <div class="form-group">
+                                    <label for="notes" class="form-label">
+                                        <i class="bi bi-journal-text text-primary me-2"></i>
+                                        Notes (Optional)
+                                    </label>
+                                    <InputTextArea id="notes" @bind-Value="tank.Notes" class="form-control" rows="4"
+                                        placeholder="Any additional information about your tank..." />
+                                    <ValidationMessage For="@(() => tank.Notes)" class="text-danger small mt-1" />
+                                </div>
+
+                                <!-- Tank Stats -->
+                                <div class="stats-box">
+                                    <h6 class="mb-3">
+                                        <i class="bi bi-graph-up me-2"></i>
+                                        Tank Statistics
+                                    </h6>
+                                    <div class="row g-3">
+                                        <div class="col-6 col-md-3">
+                                            <div class="stat-item">
+                                                <i class="bi bi-droplet-half"></i>
+                                                <div class="stat-value">@tank.WaterTests.Count</div>
+                                                <div class="stat-label">Water Tests</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-6 col-md-3">
+                                            <div class="stat-item">
+                                                <i class="bi bi-heart-pulse"></i>
+                                                <div class="stat-value">@tank.Livestock.Count</div>
+                                                <div class="stat-label">Livestock</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-6 col-md-3">
+                                            <div class="stat-item">
+                                                <i class="bi bi-gear"></i>
+                                                <div class="stat-value">@tank.Equipment.Count</div>
+                                                <div class="stat-label">Equipment</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-6 col-md-3">
+                                            <div class="stat-item">
+                                                <i class="bi bi-calendar-check"></i>
+                                                <div class="stat-value">@tank.MaintenanceLogs.Count</div>
+                                                <div class="stat-label">Maintenance</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-card-footer">
+                                <button type="submit" class="btn btn-primary btn-lg" disabled="@isSubmitting">
+                                    @if (isSubmitting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"
+                                            aria-hidden="true"></span>
+                                        <span>Updating...</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-check-circle me-2"></i>
+                                        <span>Save Changes</span>
+                                    }
+                                </button>
+                                <a href="/tanks" class="btn btn-outline-secondary btn-lg">
+                                    <i class="bi bi-x-circle me-2"></i>
+                                    Cancel
+                                </a>
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            <div class="alert alert-danger mt-3 shadow-sm">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                @errorMessage
+                            </div>
+                        }
+                    </EditForm>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .edit-tank-page {
+        background: linear-gradient(180deg, #e3f2fd 0%, #ffffff 100%);
+        min-height: 100vh;
+    }
+
+    .page-header {
+        background: linear-gradient(135deg, #0288d1 0%, #01579b 100%);
+        color: white;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+</style>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Tank? tank;
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private string? errorMessage;
+    private IBrowserFile? newImage;
+    private string? newImagePreview;
+    private string? currentImagePath;
+    private bool removeCurrentImage = false;
+    private string? userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                await LoadTank();
+            }
+        }
+    }
+
+    private async Task LoadTank()
+    {
+        if (string.IsNullOrEmpty(userId)) return;
+
+        isLoading = true;
+        tank = await TankService.GetTankByIdAsync(Id, userId);
+        if (tank != null)
+        {
+            currentImagePath = tank.ImagePath;
+        }
+        isLoading = false;
+    }
+
+    private async Task HandleImageSelected(InputFileChangeEventArgs e)
+    {
+        newImage = e.File;
+
+        if (newImage != null)
+        {
+            try
+            {
+                var imageStream = newImage.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+                var ms = new MemoryStream();
+                await imageStream.CopyToAsync(ms);
+                ms.Position = 0;
+
+                var base64 = Convert.ToBase64String(ms.ToArray());
+                newImagePreview = $"data:{newImage.ContentType};base64,{base64}";
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Error loading image preview: {ex.Message}";
+            }
+        }
+    }
+
+    private void RemoveCurrentImage()
+    {
+        removeCurrentImage = true;
+    }
+
+    private void UndoRemoveImage()
+    {
+        removeCurrentImage = false;
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (tank == null || string.IsNullOrEmpty(userId)) return;
+
+        isSubmitting = true;
+        errorMessage = null;
+
+        try
+        {
+            // Handle image changes
+            if (newImage != null)
+            {
+                if (!string.IsNullOrEmpty(currentImagePath))
+                {
+                    await FileUploadService.DeleteImageAsync(currentImagePath);
+                }
+
+                using var stream = newImage.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+                tank.ImagePath = await FileUploadService.SaveImageAsync(stream, newImage.Name);
+            }
+            else if (removeCurrentImage && !string.IsNullOrEmpty(currentImagePath))
+            {
+                await FileUploadService.DeleteImageAsync(currentImagePath);
+                tank.ImagePath = null;
+            }
+
+            await TankService.UpdateTankAsync(tank, userId);
+            Navigation.NavigateTo("/tanks");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred while updating: {ex.Message}";
+            isSubmitting = false;
+        }
+    }
+}

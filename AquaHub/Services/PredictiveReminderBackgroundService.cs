@@ -1,5 +1,5 @@
-using AquaHub.Data;
-using AquaHub.Services.Interfaces;
+using AquaHub.Shared.Data;
+using AquaHub.Shared.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace AquaHub.Services;
