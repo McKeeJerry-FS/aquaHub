@@ -1,6 +1,6 @@
 ﻿@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Home - AquaHub Mobile</PageTitle>
 
 @if (!string.IsNullOrEmpty(AquaHub.Mobile.StartupErrorHolder.ErrorMessage))
 {
@@ -12,48 +12,431 @@
 }
 else
 {
-    <h1>Welcome to AquaHub Mobile</h1>
-    <div class="home-container p-3">
-        <div class="text-center mb-4">
-            <h1 class="display-4">🐠 AquaHub Mobile</h1>
-            <p class="text-muted">Your Aquarium Management Hub</p>
+    <div class="container-fluid px-3">
+        <!-- Pro Tier Coming Soon Banner -->
+        <div class="alert alert-gradient border-0 shadow-lg mb-4" role="alert"
+            style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <div class="text-white text-center">
+                <i class="bi bi-stars fs-2 text-warning mb-2"></i>
+                <h5 class="mb-2 fw-bold">
+                    <i class="bi bi-rocket-takeoff"></i> AquaHub Pro Coming Soon!
+                </h5>
+                <p class="small mb-2">Premium features including advanced analytics, automated reminders, and more!</p>
+                <a href="/auth/register" class="btn btn-warning btn-sm">
+                    <i class="bi bi-crown-fill"></i> Learn More
+                </a>
+            </div>
         </div>
 
-        <div class="text-center py-5">
-            <h3 class="mt-3">Welcome to AquaHub!</h3>
-            <p class="text-muted mb-4">Get started by adding your first aquarium!</p>
-            <a href="/tanks/add" class="btn btn-primary btn-lg">
-                Add Your First Tank
-            </a>
+        <!-- Hero Section -->
+        <div class="hero-section text-center py-4 mb-4">
+            <i class="bi bi-droplet-fill text-primary display-1 mb-3"></i>
+            <h1 class="display-5 fw-bold text-primary mb-3">Welcome to AquaHub!</h1>
+            <p class="lead fs-6 text-muted mb-4">Your mobile solution for managing your aquarium and aquatic life</p>
+            <div class="d-flex gap-2 justify-content-center flex-wrap mb-3">
+                <a href="/aquariums" class="btn btn-primary">
+                    <i class="bi bi-speedometer2"></i> My Tanks
+                </a>
+                <a href="#features" class="btn btn-outline-info">
+                    <i class="bi bi-stars"></i> Features
+                </a>
+            </div>
+            <div class="badges-container d-flex gap-2 justify-content-center flex-wrap">
+                <span class="badge bg-primary">
+                    <i class="bi bi-check-circle"></i> v1.0.0
+                </span>
+                <span class="badge bg-success">
+                    <i class="bi bi-shield-check"></i> Secure
+                </span>
+                <span class="badge bg-info">
+                    <i class="bi bi-graph-up"></i> Analytics
+                </span>
+                <span class="badge bg-warning">
+                    <i class="bi bi-speedometer"></i> Fast
+                </span>
+            </div>
         </div>
 
-        <div class="quick-actions mt-4">
-            <h5 class="mb-3">Quick Actions</h5>
-            <div class="row g-2">
-                <div class="col-6">
-                    <a href="/aquariums" class="btn btn-outline-primary w-100 py-3">
-                        Tanks
-                    </a>
+        <!-- Quick Summary -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body p-4 text-center">
+                <h3 class="mb-3">Why Choose AquaHub?</h3>
+                <p class="text-muted mb-4">
+                    Transform your aquarium keeping with comprehensive tracking, analytics, and insights.
+                </p>
+
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="feature-highlight p-3 rounded bg-light h-100">
+                            <i class="bi bi-droplet-fill text-primary fs-1"></i>
+                            <h6 class="mt-2 mb-1">Multi-Tank</h6>
+                            <small class="text-muted">Unlimited aquariums</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="feature-highlight p-3 rounded bg-light h-100">
+                            <i class="bi bi-heart-pulse-fill text-danger fs-1"></i>
+                            <h6 class="mt-2 mb-1">Livestock</h6>
+                            <small class="text-muted">Track every inhabitant</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="feature-highlight p-3 rounded bg-light h-100">
+                            <i class="bi bi-clipboard-data text-info fs-1"></i>
+                            <h6 class="mt-2 mb-1">Water Testing</h6>
+                            <small class="text-muted">Monitor chemistry</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="feature-highlight p-3 rounded bg-light h-100">
+                            <i class="bi bi-journal-text text-warning fs-1"></i>
+                            <h6 class="mt-2 mb-1">Maintenance</h6>
+                            <small class="text-muted">Log care routine</small>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-6">
-                    <a href="/equipment" class="btn btn-outline-primary w-100 py-3">
-                        Equipment
-                    </a>
+            </div>
+        </div>
+
+        <!-- Tank Management Section -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-droplet-fill"></i> Tank Management</h5>
+            </div>
+            <div class="card-body p-3">
+                <h6 class="mb-2">All Your Aquariums in One Place</h6>
+                <p class="text-muted small mb-3">
+                    Complete overview of all your tanks with detailed tracking for livestock, equipment, parameters, and
+                    maintenance.
+                </p>
+                <ul class="list-unstyled small">
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle-fill text-success me-1"></i>
+                        <strong>Tank Profiles:</strong> Freshwater, saltwater, or reef
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle-fill text-success me-1"></i>
+                        <strong>Photo Logs:</strong> Track visual progress
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle-fill text-success me-1"></i>
+                        <strong>Quick Overview:</strong> Age, volume, type, livestock
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle-fill text-success me-1"></i>
+                        <strong>Easy Navigation:</strong> Jump to any dashboard
+                    </li>
+                </ul>
+                <a href="/aquariums" class="btn btn-primary btn-sm w-100">
+                    <i class="bi bi-arrow-right-circle"></i> View My Tanks
+                </a>
+            </div>
+        </div>
+
+        <!-- Livestock Management Section -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-heart-pulse-fill"></i> Livestock Management</h5>
+            </div>
+            <div class="card-body p-3">
+                <h6 class="mb-2">Track Every Inhabitant</h6>
+                <p class="text-muted small mb-3">
+                    Monitor fish, corals, invertebrates, and plants with detailed profiles and health tracking.
+                </p>
+                <ul class="list-unstyled small">
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle-fill text-success me-1"></i>
+                        <strong>Fish Profiles:</strong> Species, diet, compatibility
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle-fill text-success me-1"></i>
+                        <strong>Coral Tracking:</strong> SPS, LPS, soft corals
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle-fill text-success me-1"></i>
+                        <strong>Plant Database:</strong> Aquatic plant care
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle-fill text-success me-1"></i>
+                        <strong>Health Monitoring:</strong> Track wellbeing
+                    </li>
+                </ul>
+                <a href="/aquariums" class="btn btn-info btn-sm w-100">
+                    <i class="bi bi-plus-circle"></i> Manage Livestock
+                </a>
+            </div>
+        </div>
+
+        <!-- Water Testing Section -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="bi bi-clipboard-data"></i> Water Parameters</h5>
+            </div>
+            <div class="card-body p-3">
+                <h6 class="mb-2">Monitor Water Chemistry</h6>
+                <p class="text-muted small mb-3">
+                    Record and analyze parameters to maintain optimal conditions with interactive charts.
+                </p>
+                <ul class="list-unstyled small">
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle-fill text-success me-1"></i>
+                        <strong>Water Tests:</strong> All key parameters
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle-fill text-success me-1"></i>
+                        <strong>Trend Analysis:</strong> Visualize changes
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle-fill text-success me-1"></i>
+                        <strong>Safe Ranges:</strong> Compare vs ideals
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle-fill text-success me-1"></i>
+                        <strong>Historical Data:</strong> Track stability
+                    </li>
+                </ul>
+                <a href="/aquariums" class="btn btn-warning btn-sm w-100">
+                    <i class="bi bi-plus-circle"></i> Log Water Test
+                </a>
+            </div>
+        </div>
+
+        <!-- Key Features Grid -->
+        <div class="card shadow-sm border-0 mb-4" id="features">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-stars"></i> Powerful Features</h5>
+            </div>
+            <div class="card-body p-3">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="feature-card p-3 bg-light rounded text-center">
+                            <i class="bi bi-gear-fill text-primary fs-2"></i>
+                            <h6 class="mt-2 mb-1 small">Equipment</h6>
+                            <p class="text-muted mb-0" style="font-size: 0.75rem;">Track all gear</p>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="feature-card p-3 bg-light rounded text-center">
+                            <i class="bi bi-calendar-check text-success fs-2"></i>
+                            <h6 class="mt-2 mb-1 small">Maintenance</h6>
+                            <p class="text-muted mb-0" style="font-size: 0.75rem;">Log activities</p>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="feature-card p-3 bg-light rounded text-center">
+                            <i class="bi bi-eyedropper text-info fs-2"></i>
+                            <h6 class="mt-2 mb-1 small">Dosing</h6>
+                            <p class="text-muted mb-0" style="font-size: 0.75rem;">Track additions</p>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="feature-card p-3 bg-light rounded text-center">
+                            <i class="bi bi-camera-fill text-warning fs-2"></i>
+                            <h6 class="mt-2 mb-1 small">Photo Logs</h6>
+                            <p class="text-muted mb-0" style="font-size: 0.75rem;">Visual progress</p>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="feature-card p-3 bg-light rounded text-center">
+                            <i class="bi bi-phone text-danger fs-2"></i>
+                            <h6 class="mt-2 mb-1 small">Mobile Ready</h6>
+                            <p class="text-muted mb-0" style="font-size: 0.75rem;">Native app</p>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="feature-card p-3 bg-light rounded text-center">
+                            <i class="bi bi-shield-lock text-secondary fs-2"></i>
+                            <h6 class="mt-2 mb-1 small">Secure</h6>
+                            <p class="text-muted mb-0" style="font-size: 0.75rem;">Private data</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-6">
-                    <a href="/livestock" class="btn btn-outline-primary w-100 py-3">
-                        Livestock
-                    </a>
+            </div>
+        </div>
+
+        <!-- Recently Added Features -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <h5 class="mb-0"><i class="bi bi-rocket-takeoff"></i> New Features</h5>
+            </div>
+            <div class="card-body p-3">
+                <p class="text-muted small mb-3 text-center">New analytics and automation tools</p>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div class="feature-card p-3 bg-light rounded text-center border-start border-success border-3">
+                            <div class="badge bg-success mb-2 small">NEW</div>
+                            <i class="bi bi-graph-up-arrow text-success fs-3"></i>
+                            <h6 class="mt-2 mb-1 small">Growth Tracker</h6>
+                            <p class="text-muted mb-0" style="font-size: 0.7rem;">Monitor size</p>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="feature-card p-3 bg-light rounded text-center border-start border-primary border-3">
+                            <div class="badge bg-primary mb-2 small">NEW</div>
+                            <i class="bi bi-currency-dollar text-primary fs-3"></i>
+                            <h6 class="mt-2 mb-1 small">Expenses</h6>
+                            <p class="text-muted mb-0" style="font-size: 0.7rem;">Track costs</p>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="feature-card p-3 bg-light rounded text-center border-start border-info border-3">
+                            <div class="badge bg-info mb-2 small">NEW</div>
+                            <i class="bi bi-heart-pulse text-info fs-3"></i>
+                            <h6 class="mt-2 mb-1 small">Health Score</h6>
+                            <p class="text-muted mb-0" style="font-size: 0.7rem;">Tank wellness</p>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="feature-card p-3 bg-light rounded text-center border-start border-warning border-3">
+                            <div class="badge bg-warning mb-2 small">NEW</div>
+                            <i class="bi bi-magic text-warning fs-3"></i>
+                            <h6 class="mt-2 mb-1 small">AI Predictions</h6>
+                            <p class="text-muted mb-0" style="font-size: 0.7rem;">Smart insights</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-6">
-                    <a href="/maintenance" class="btn btn-outline-primary w-100 py-3">
-                        Maintenance
+            </div>
+        </div>
+
+        <!-- Stats Section -->
+        <div class="card shadow-sm border-0 mb-4 bg-gradient"
+            style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <div class="card-body text-center text-dark py-4">
+                <h5 class="mb-3">Built for Modern Aquarists</h5>
+                <p class="small mb-4">Data-driven aquarium management</p>
+
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="stat-card">
+                            <h3 class="mb-1">∞</h3>
+                            <p class="mb-0 small">Unlimited Tanks</p>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-card">
+                            <h3 class="mb-1">∞</h3>
+                            <p class="mb-0 small">Unlimited Livestock</p>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-card">
+                            <h3 class="mb-1">8+</h3>
+                            <p class="mb-0 small">Core Modules</p>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-card">
+                            <h3 class="mb-1">1.0</h3>
+                            <p class="mb-0 small">Version</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Call to Action -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body text-center py-4">
+                <h5 class="text-primary mb-3">Ready to Get Started?</h5>
+                <p class="text-muted small mb-4">
+                    Start managing your aquariums like a pro with AquaHub's tracking tools.
+                </p>
+                <div class="d-flex gap-2 justify-content-center flex-wrap">
+                    <a href="/aquariums" class="btn btn-primary">
+                        <i class="bi bi-rocket-takeoff"></i> My Tanks
+                    </a>
+                    <a href="/auth/login" class="btn btn-outline-success">
+                        <i class="bi bi-box-arrow-in-right"></i> Sign In
                     </a>
                 </div>
             </div>
         </div>
     </div>
 }
+
+<style>
+    .hero-section {
+        background: linear-gradient(135deg, rgba(0, 107, 183, 0.05) 0%, rgba(0, 188, 212, 0.05) 100%);
+        border-radius: 1rem;
+    }
+
+    .feature-highlight {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .feature-highlight:active {
+        transform: scale(0.95);
+    }
+
+    .feature-card {
+        transition: transform 0.2s ease;
+    }
+
+    .feature-card:active {
+        transform: scale(0.95);
+    }
+
+    .stat-card {
+        padding: 1rem;
+    }
+
+    .badges-container .badge {
+        animation: fadeInUp 0.6s ease-out backwards;
+    }
+
+    .badges-container .badge:nth-child(1) {
+        animation-delay: 0.1s;
+    }
+
+    .badges-container .badge:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    .badges-container .badge:nth-child(3) {
+        animation-delay: 0.3s;
+    }
+
+    .badges-container .badge:nth-child(4) {
+        animation-delay: 0.4s;
+    }
+
+    .alert-gradient {
+        animation: slideInDown 0.8s ease-out;
+    }
+
+    @@keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @@keyframes slideInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-30px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Mobile optimizations */
+    .display-5 {
+        font-size: 1.8rem;
+    }
+
+    .card-header h5 {
+        font-size: 1rem;
+    }
+</style>
 
 @code {
     protected override async Task OnInitializedAsync()
