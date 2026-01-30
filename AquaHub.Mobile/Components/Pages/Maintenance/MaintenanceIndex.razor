@@ -1,0 +1,69 @@
+@page "/maintenance"
+@inject IMaintenanceLogService MaintenanceService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Maintenance</PageTitle>
+
+<div class="container-fluid p-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Maintenance</h2>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+        </div>
+    }
+    else if (logs == null || !logs.Any())
+    {
+        <div class="text-center py-5">
+            <p class="text-muted">No maintenance logs yet</p>
+        </div>
+    }
+    else
+    {
+        <div class="list-group">
+            @foreach (var log in logs.Take(20))
+            {
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">@log.Type</h6>
+                            <small class="text-muted">
+                                @log.Tank?.Name • @log.Timestamp.ToString("MMM dd, yyyy")
+                            </small>
+                            @if (!string.IsNullOrEmpty(log.Notes))
+                            {
+                                <p class="mb-0 mt-1 small">@log.Notes</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<MaintenanceLog>? logs;
+    private bool isLoading = true;
+    private string? userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (userId != null)
+            {
+                var allLogs = await MaintenanceService.GetAllMaintenanceLogsAsync(userId);
+                logs = allLogs.Take(20).ToList();
+            }
+        }
+        isLoading = false;
+    }
+}

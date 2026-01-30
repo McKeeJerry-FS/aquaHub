@@ -1,0 +1,107 @@
+@page "/aquariums"
+@using AquaHub.Shared.Services.Interfaces
+@using AquaHub.Shared.Models
+@inject ITankService TankService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager Navigation
+
+<PageTitle>My Tanks</PageTitle>
+
+<div class="container-fluid p-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>My Tanks</h2>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="text-muted mt-2">Loading tanks...</p>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">
+            <h5>Error</h5>
+            <pre style="white-space: pre-wrap;">@errorMessage</pre>
+        </div>
+    }
+    else if (tanks == null || !tanks.Any())
+    {
+        <div class="text-center py-5">
+            <p class="text-muted">No tanks yet</p>
+            <p class="text-muted">Sample data should appear after a few seconds</p>
+        </div>
+    }
+    else
+    {
+        <div class="list-group">
+            @foreach (var tank in tanks)
+            {
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-1">@tank.Name</h5>
+                            <small class="text-muted">
+                                @tank.VolumeGallons gal • @tank.Type
+                            </small>
+                            @if (!string.IsNullOrEmpty(tank.Notes))
+                            {
+                                <p class="mb-0 mt-2"><small>@tank.Notes</small></p>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<Tank>? tanks;
+    private bool isLoading = true;
+    private string? userId;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTanks();
+    }
+
+    private async Task LoadTanks()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            // Wait a bit for database to be seeded
+            await Task.Delay(2000);
+
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                errorMessage = "User ID not found";
+                return;
+            }
+
+            tanks = await TankService.GetAllTanksAsync(userId);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"{ex.GetType().Name}: {ex.Message}";
+            if (ex.InnerException != null)
+            {
+                errorMessage += $"\n\nInner: {ex.InnerException.Message}";
+            }
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

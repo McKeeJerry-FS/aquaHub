@@ -1,5 +1,65 @@
 ﻿@page "/"
 
-<h1>Hello, world!</h1>
+<PageTitle>Home</PageTitle>
 
-Welcome to your new app.
+@if (!string.IsNullOrEmpty(AquaHub.Mobile.StartupErrorHolder.ErrorMessage))
+{
+    <div style="padding: 20px; background: #fee; color: #c00; margin: 10px;">
+        <h3>Database Error</h3>
+        <pre
+            style="white-space: pre-wrap; font-size: 11px; max-height: 400px; overflow: auto;">@AquaHub.Mobile.StartupErrorHolder.ErrorMessage</pre>
+    </div>
+}
+else
+{
+    <h1>Welcome to AquaHub Mobile</h1>
+    <div class="home-container p-3">
+        <div class="text-center mb-4">
+            <h1 class="display-4">🐠 AquaHub Mobile</h1>
+            <p class="text-muted">Your Aquarium Management Hub</p>
+        </div>
+
+        <div class="text-center py-5">
+            <h3 class="mt-3">Welcome to AquaHub!</h3>
+            <p class="text-muted mb-4">Get started by adding your first aquarium!</p>
+            <a href="/tanks/add" class="btn btn-primary btn-lg">
+                Add Your First Tank
+            </a>
+        </div>
+
+        <div class="quick-actions mt-4">
+            <h5 class="mb-3">Quick Actions</h5>
+            <div class="row g-2">
+                <div class="col-6">
+                    <a href="/aquariums" class="btn btn-outline-primary w-100 py-3">
+                        Tanks
+                    </a>
+                </div>
+                <div class="col-6">
+                    <a href="/equipment" class="btn btn-outline-primary w-100 py-3">
+                        Equipment
+                    </a>
+                </div>
+                <div class="col-6">
+                    <a href="/livestock" class="btn btn-outline-primary w-100 py-3">
+                        Livestock
+                    </a>
+                </div>
+                <div class="col-6">
+                    <a href="/maintenance" class="btn btn-outline-primary w-100 py-3">
+                        Maintenance
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        // Wait for database to initialize, then refresh
+        await Task.Delay(3000);
+        StateHasChanged();
+    }
+}

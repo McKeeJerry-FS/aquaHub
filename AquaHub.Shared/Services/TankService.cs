@@ -22,10 +22,10 @@ public class TankService : ITankService
     {
         return await _context.Tanks
             .Where(t => t.UserId == userId)
-            .Include(t => t.WaterTests)
-            .Include(t => t.Livestock)
-            .Include(t => t.Equipment)
-            .Include(t => t.MaintenanceLogs)
+            // Temporarily remove all includes to isolate the issue
+            // .Include(t => t.WaterTests)
+            // .Include(t => t.Livestock)
+            // .Include(t => t.MaintenanceLogs)
             .ToListAsync();
     }
 
@@ -35,7 +35,6 @@ public class TankService : ITankService
             .Where(t => t.UserId == userId)
             .Include(t => t.WaterTests)
             .Include(t => t.Livestock)
-            .Include(t => t.Equipment)
             .Include(t => t.MaintenanceLogs)
             .FirstOrDefaultAsync(t => t.Id == id);
     }
@@ -94,7 +93,6 @@ public class TankService : ITankService
             .Where(t => t.Id == tankId && t.UserId == userId)
             .Include(t => t.WaterTests)
             .Include(t => t.Livestock)
-            .Include(t => t.Equipment)
             .Include(t => t.MaintenanceLogs)
             .FirstOrDefaultAsync();
 
@@ -166,11 +164,32 @@ public class TankService : ITankService
             }
         }
 
-        // Get equipment needing maintenance (example: installed > 6 months ago)
+        // Get equipment needing maintenance - query all equipment types separately
         var sixMonthsAgo = DateTime.Now.AddMonths(-6);
-        viewModel.EquipmentNeedingMaintenance = tank.Equipment
-            .Where(e => e.InstalledOn < sixMonthsAgo)
-            .ToList();
+        var equipmentNeedingMaintenance = new List<Equipment>();
+
+        equipmentNeedingMaintenance.AddRange(
+            await _context.Filters
+                .Where(e => e.TankId == tankId && e.InstalledOn < sixMonthsAgo)
+                .ToListAsync()
+        );
+        equipmentNeedingMaintenance.AddRange(
+            await _context.Lights
+                .Where(e => e.TankId == tankId && e.InstalledOn < sixMonthsAgo)
+                .ToListAsync()
+        );
+        equipmentNeedingMaintenance.AddRange(
+            await _context.Heaters
+                .Where(e => e.TankId == tankId && e.InstalledOn < sixMonthsAgo)
+                .ToListAsync()
+        );
+        equipmentNeedingMaintenance.AddRange(
+            await _context.ProteinSkimmers
+                .Where(e => e.TankId == tankId && e.InstalledOn < sixMonthsAgo)
+                .ToListAsync()
+        );
+
+        viewModel.EquipmentNeedingMaintenance = equipmentNeedingMaintenance;
 
         // Recent maintenance
         viewModel.RecentMaintenance = tank.MaintenanceLogs
