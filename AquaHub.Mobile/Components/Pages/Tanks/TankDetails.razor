@@ -59,7 +59,7 @@
         <div class="card mb-3">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Equipment (@equipment.Count)</h5>
-                <a href="/equipment/add?tankId=@Id" class="btn btn-sm btn-primary">+ Add</a>
+                <a href="/tanks/@Id/equipment/add" class="btn btn-sm btn-primary">+ Add</a>
             </div>
             <div class="card-body">
                 @if (!equipment.Any())
@@ -85,7 +85,7 @@
         <div class="card mb-3">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Livestock (@livestock.Count)</h5>
-                <a href="/livestock/add?tankId=@Id" class="btn btn-sm btn-primary">+ Add</a>
+                <a href="/tanks/@Id/livestock/add" class="btn btn-sm btn-primary">+ Add</a>
             </div>
             <div class="card-body">
                 @if (!livestock.Any())
@@ -105,6 +105,16 @@
                         }
                     </div>
                 }
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Maintenance Log</h5>
+                <a href="/tanks/@Id/maintenance/add" class="btn btn-sm btn-primary">+ Add</a>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">View and log maintenance activities</p>
             </div>
         </div>
     }
