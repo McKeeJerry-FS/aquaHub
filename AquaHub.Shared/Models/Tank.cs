@@ -42,5 +42,20 @@ public class Tank
     public ICollection<WaterTest> WaterTests { get; set; } = new List<WaterTest>();
     public ICollection<Livestock> Livestock { get; set; } = new List<Livestock>();
     public ICollection<MaintenanceLog> MaintenanceLogs { get; set; } = new List<MaintenanceLog>();
+
+    // Equipment navigation properties
+    public ICollection<Filter> Filters { get; set; } = new List<Filter>();
+    public ICollection<Light> Lights { get; set; } = new List<Light>();
+    public ICollection<Heater> Heaters { get; set; } = new List<Heater>();
+    public ICollection<ProteinSkimmer> ProteinSkimmers { get; set; } = new List<ProteinSkimmer>();
+
+    // Computed property to get all equipment combined
+    [NotMapped]
+    public ICollection<Equipment> Equipment =>
+        Filters.Cast<Equipment>()
+            .Concat(Lights.Cast<Equipment>())
+            .Concat(Heaters.Cast<Equipment>())
+            .Concat(ProteinSkimmers.Cast<Equipment>())
+            .ToList();
 }
 

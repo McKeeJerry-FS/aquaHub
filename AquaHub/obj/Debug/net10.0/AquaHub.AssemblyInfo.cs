@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("AquaHub")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4b9b89879f840ee2a644057ec6e03199eee33a5f")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+72bc04016d1100cadcb45f1a94ae125cb0e86dee")]
 [assembly: System.Reflection.AssemblyProductAttribute("AquaHub")]
 [assembly: System.Reflection.AssemblyTitleAttribute("AquaHub")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

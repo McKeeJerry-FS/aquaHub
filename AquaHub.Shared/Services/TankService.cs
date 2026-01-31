@@ -22,10 +22,13 @@ public class TankService : ITankService
     {
         return await _context.Tanks
             .Where(t => t.UserId == userId)
-            // Temporarily remove all includes to isolate the issue
-            // .Include(t => t.WaterTests)
-            // .Include(t => t.Livestock)
-            // .Include(t => t.MaintenanceLogs)
+            .Include(t => t.WaterTests)
+            .Include(t => t.Livestock)
+            .Include(t => t.MaintenanceLogs)
+            .Include(t => t.Filters)
+            .Include(t => t.Lights)
+            .Include(t => t.Heaters)
+            .Include(t => t.ProteinSkimmers)
             .ToListAsync();
     }
 
@@ -36,6 +39,10 @@ public class TankService : ITankService
             .Include(t => t.WaterTests)
             .Include(t => t.Livestock)
             .Include(t => t.MaintenanceLogs)
+            .Include(t => t.Filters)
+            .Include(t => t.Lights)
+            .Include(t => t.Heaters)
+            .Include(t => t.ProteinSkimmers)
             .FirstOrDefaultAsync(t => t.Id == id);
     }
 
@@ -94,6 +101,10 @@ public class TankService : ITankService
             .Include(t => t.WaterTests)
             .Include(t => t.Livestock)
             .Include(t => t.MaintenanceLogs)
+            .Include(t => t.Filters)
+            .Include(t => t.Lights)
+            .Include(t => t.Heaters)
+            .Include(t => t.ProteinSkimmers)
             .FirstOrDefaultAsync();
 
         if (tank == null)
