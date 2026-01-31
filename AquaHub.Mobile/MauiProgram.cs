@@ -53,6 +53,12 @@ public static class MauiProgram
 		builder.Services.AddScoped<IParameterAlertService, ParameterAlertService>();
 		builder.Services.AddScoped<IPredictiveReminderService, PredictiveReminderService>();
 
+		// Register secure storage for account management
+		builder.Services.AddSingleton<AquaHub.Mobile.Services.ISecureStorage, MauiSecureStorage>();
+
+		// Register mobile alert service
+		builder.Services.AddScoped<IMobileAlertService, MobileAlertService>();
+
 #if DEBUG
 		builder.Services.AddBlazorWebViewDeveloperTools();
 		builder.Logging.AddDebug();

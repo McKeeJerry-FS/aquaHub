@@ -1,0 +1,89 @@
+@page "/login"
+@using AquaHub.Shared.Models
+@using AquaHub.Mobile.Services
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inject ISecureStorage SecureStorage
+
+<h3>Login</h3>
+
+@if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <div class="alert alert-danger">@ErrorMessage</div>
+}
+
+<EditForm Model="loginModel" OnValidSubmit="HandleLogin">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <div class="mb-3">
+        <label>Email</label>
+        <InputText @bind-Value="loginModel.Email" class="form-control" />
+    </div>
+    <div class="mb-3">
+        <label>Password</label>
+        <InputText @bind-Value="loginModel.Password" type="password" class="form-control" />
+    </div>
+    <button type="submit" class="btn btn-primary">Login</button>
+</EditForm>
+
+@if (Accounts.Count > 0)
+{
+    <h4>Switch Account</h4>
+    <ul>
+        @foreach (var account in Accounts)
+        {
+            <li>
+                <button class="btn btn-link" @onclick="() => SwitchAccount(account)">@account.Email</button>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    private LoginModel loginModel = new();
+    private string? ErrorMessage;
+    private List<LoginModel> Accounts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load accounts from secure storage
+        var accountsJson = await SecureStorage.GetAsync("accounts");
+        if (!string.IsNullOrEmpty(accountsJson))
+        {
+            Accounts = System.Text.Json.JsonSerializer.Deserialize<List<LoginModel>>(accountsJson) ?? new();
+        }
+    }
+
+    private async Task HandleLogin()
+    {
+        // TODO: Replace with real authentication logic
+        if (loginModel.Email == "test@example.com" && loginModel.Password == "password")
+        {
+            // Save account to secure storage
+            if (!Accounts.Any(a => a.Email == loginModel.Email))
+            {
+                Accounts.Add(new LoginModel { Email = loginModel.Email, Password = loginModel.Password });
+                var json = System.Text.Json.JsonSerializer.Serialize(Accounts);
+                await SecureStorage.SetAsync("accounts", json);
+            }
+            ((MobileAuthenticationStateProvider)AuthStateProvider).MarkUserAsAuthenticated(loginModel.Email, loginModel.Email);
+            Navigation.NavigateTo("/");
+        }
+        else
+        {
+            ErrorMessage = "Invalid credentials.";
+        }
+    }
+
+    private void SwitchAccount(LoginModel account)
+    {
+        ((MobileAuthenticationStateProvider)AuthStateProvider).MarkUserAsAuthenticated(account.Email, account.Email);
+        Navigation.NavigateTo("/");
+    }
+
+    public class LoginModel
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+    }
+}

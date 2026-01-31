@@ -1,0 +1,138 @@
+@page "/tanks/{TankId:int}/alerts"
+@inject AquaHub.Shared.Services.Interfaces.IParameterAlertService ParameterAlertService
+@inject AuthenticationStateProvider AuthProvider
+@using AquaHub.Shared.Models
+@using AquaHub.Shared.Models.Enums
+
+<h3>Manage Alerts</h3>
+
+@if (alerts == null)
+{
+    <p>Loading alerts...</p>
+}
+else
+{
+    <button class="btn btn-primary" @onclick="ShowAddAlert">Add Alert</button>
+    <ul>
+        @foreach (var alert in alerts)
+        {
+            <li>
+                <b>@alert.Parameter</b> | Min: @alert.MinValue | Max: @alert.MaxValue | Severity: @alert.Severity
+                <br />
+                <span>@alert.CustomMessage</span>
+                <br />
+                <button class="btn btn-sm btn-secondary" @onclick="() => EditAlert(alert)">Edit</button>
+                <button class="btn btn-sm btn-danger" @onclick="() => DeleteAlert(alert.Id)">Delete</button>
+                <button class="btn btn-sm btn-warning" @onclick="() => ToggleAlert(alert)">@((alert.IsEnabled ? "Disable" :
+                                "Enable"))</button>
+            </li>
+        }
+    </ul>
+}
+
+@if (showForm)
+{
+    <EditForm Model="editAlert" OnValidSubmit="SaveAlert">
+        <DataAnnotationsValidator />
+        <div>
+            <label>Parameter:</label>
+            <InputSelect @bind-Value="editAlert.Parameter">
+                @foreach (var param in Enum.GetValues(typeof(WaterParameter)))
+                {
+                    <option value="@param">@param</option>
+                }
+            </InputSelect>
+        </div>
+        <div>
+            <label>Min Value:</label>
+            <InputNumber @bind-Value="editAlert.MinValue" />
+        </div>
+        <div>
+            <label>Max Value:</label>
+            <InputNumber @bind-Value="editAlert.MaxValue" />
+        </div>
+        <div>
+            <label>Severity:</label>
+            <InputSelect @bind-Value="editAlert.Severity">
+                @foreach (var sev in Enum.GetValues(typeof(AlertSeverity)))
+                {
+                    <option value="@sev">@sev</option>
+                }
+            </InputSelect>
+        </div>
+        <div>
+            <label>Custom Message:</label>
+            <InputText @bind-Value="editAlert.CustomMessage" />
+        </div>
+        <button class="btn btn-success" type="submit">Save</button>
+        <button class="btn btn-secondary" type="button" @onclick="CancelForm">Cancel</button>
+    </EditForm>
+}
+
+@code {
+    [Parameter] public int TankId { get; set; }
+    private List<ParameterAlert>? alerts;
+    private ParameterAlert editAlert = new();
+    private bool showForm = false;
+    private string? userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirst(c => c.Type == "sub")?.Value;
+        await LoadAlerts();
+    }
+
+    private async Task LoadAlerts()
+    {
+        if (!string.IsNullOrEmpty(userId))
+            alerts = await ParameterAlertService.GetAlertsByTankAsync(TankId, userId);
+    }
+
+    private void ShowAddAlert()
+    {
+        editAlert = new ParameterAlert { TankId = TankId, UserId = userId ?? string.Empty, IsEnabled = true };
+        showForm = true;
+    }
+
+    private void EditAlert(ParameterAlert alert)
+    {
+        editAlert = new ParameterAlert
+        {
+            Id = alert.Id,
+            UserId = alert.UserId,
+            TankId = alert.TankId,
+            Parameter = alert.Parameter,
+            MinValue = alert.MinValue,
+            MaxValue = alert.MaxValue,
+            Severity = alert.Severity,
+            CustomMessage = alert.CustomMessage,
+            IsEnabled = alert.IsEnabled
+        };
+        showForm = true;
+    }
+
+    private async Task SaveAlert()
+    {
+        if (editAlert.Id == 0)
+            await ParameterAlertService.CreateAlertAsync(editAlert);
+        else
+            await ParameterAlertService.UpdateAlertAsync(editAlert, userId!);
+        showForm = false;
+        await LoadAlerts();
+    }
+
+    private void CancelForm() => showForm = false;
+
+    private async Task DeleteAlert(int alertId)
+    {
+        await ParameterAlertService.DeleteAlertAsync(alertId, userId!);
+        await LoadAlerts();
+    }
+
+    private async Task ToggleAlert(ParameterAlert alert)
+    {
+        await ParameterAlertService.ToggleAlertAsync(alert.Id, userId!, !alert.IsEnabled);
+        await LoadAlerts();
+    }
+}

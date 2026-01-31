@@ -1,0 +1,46 @@
+@page "/alerts"
+@inject AquaHub.Mobile.Services.IMobileAlertService MobileAlertService
+@inject AquaHub.Shared.Services.Interfaces.IParameterAlertService ParameterAlertService
+@inject AuthenticationStateProvider AuthProvider
+
+<h3>Alerts</h3>
+
+@if (alerts == null)
+{
+    <p>Loading alerts...</p>
+}
+else if (!alerts.Any())
+{
+    <p>No alerts found.</p>
+}
+else
+{
+    <ul>
+        @foreach (var alert in alerts)
+        {
+            <li>
+                <b>@alert.Parameter.ToString()</b>: @alert.Message
+                <br />
+                <small>@alert.TriggeredAt.ToLocalTime().ToString("g")</small>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    private List<AquaHub.Shared.Models.TriggeredAlert>? alerts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            var userId = user.FindFirst(c => c.Type == "sub")?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                alerts = await ParameterAlertService.CheckAllTanksForUserAsync(userId);
+            }
+        }
+    }
+}
