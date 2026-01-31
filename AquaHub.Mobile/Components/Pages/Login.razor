@@ -4,6 +4,8 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 @inject ISecureStorage SecureStorage
+@inject AquaHub.Mobile.Services.AuthService AuthService
+@inject AquaHub.Mobile.Services.ITokenService TokenService
 
 <h3>Login</h3>
 
@@ -56,22 +58,17 @@
 
     private async Task HandleLogin()
     {
-        // TODO: Replace with real authentication logic
-        if (loginModel.Email == "test@example.com" && loginModel.Password == "password")
+        ErrorMessage = null;
+        var result = await AuthService.LoginAsync(loginModel.Email, loginModel.Password);
+        if (result != null && !string.IsNullOrEmpty(result.Token))
         {
-            // Save account to secure storage
-            if (!Accounts.Any(a => a.Email == loginModel.Email))
-            {
-                Accounts.Add(new LoginModel { Email = loginModel.Email, Password = loginModel.Password });
-                var json = System.Text.Json.JsonSerializer.Serialize(Accounts);
-                await SecureStorage.SetAsync("accounts", json);
-            }
-            ((MobileAuthenticationStateProvider)AuthStateProvider).MarkUserAsAuthenticated(loginModel.Email, loginModel.Email);
+            await TokenService.StoreTokenAsync(result.Token);
+            // Optionally save account info, update auth state, etc.
             Navigation.NavigateTo("/");
         }
         else
         {
-            ErrorMessage = "Invalid credentials.";
+            ErrorMessage = "Invalid credentials or server error.";
         }
     }
 

@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿// ...existing code...
+using Microsoft.Extensions.Logging;
 using AquaHub.Shared.Services;
 using AquaHub.Shared.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -56,8 +57,16 @@ public static class MauiProgram
 		// Register secure storage for account management
 		builder.Services.AddSingleton<AquaHub.Mobile.Services.ISecureStorage, MauiSecureStorage>();
 
+
 		// Register mobile alert service
 		builder.Services.AddScoped<IMobileAlertService, MobileAlertService>();
+
+		// Register mobile email notification stub
+		builder.Services.AddScoped<IEmailNotificationService, MobileEmailNotificationStub>();
+
+		// Register AuthService with HttpClient for API calls
+		builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("http://localhost:5172/") });
+		builder.Services.AddScoped<AuthService>();
 
 #if DEBUG
 		builder.Services.AddBlazorWebViewDeveloperTools();

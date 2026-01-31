@@ -1,0 +1,76 @@
+@page "/register"
+@inject AquaHub.Mobile.Services.AuthService AuthService
+@inject NavigationManager Navigation
+@inject AquaHub.Mobile.Services.ITokenService TokenService
+
+<h3>Register</h3>
+
+@if (!string.IsNullOrEmpty(error))
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+<EditForm Model="registerModel" OnValidSubmit="HandleRegister">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <div>
+        <label>Email:</label>
+        <InputText @bind-Value="registerModel.Email" />
+    </div>
+    <div>
+        <label>Username:</label>
+        <InputText @bind-Value="registerModel.UserName" />
+    </div>
+    <div>
+        <label>Password:</label>
+        <InputText @bind-Value="registerModel.Password" type="password" />
+    </div>
+    <button class="btn btn-primary" type="submit">Register</button>
+</EditForm>
+
+<button class="btn btn-secondary mt-3" @onclick="TestTokenService">Test Token Logic</button>
+
+@if (!string.IsNullOrEmpty(tokenTestResult))
+{
+    <div class="alert alert-info mt-2">
+        <pre>@tokenTestResult</pre>
+    </div>
+}
+
+@code {
+    private RegisterModel registerModel = new();
+    private string? error;
+    private string? tokenTestResult;
+
+    private async Task HandleRegister()
+    {
+        var result = await AuthService.RegisterAsync(registerModel.Email, registerModel.Password, registerModel.UserName);
+        if (result != null && !string.IsNullOrEmpty(result.Token))
+        {
+            await TokenService.StoreTokenAsync(result.Token);
+            Navigation.NavigateTo("/");
+        }
+        else
+        {
+            error = "Registration failed. Please try again.";
+        }
+    }
+
+    private async Task TestTokenService()
+    {
+        tokenTestResult = string.Empty;
+        string testToken = "test-token-abc";
+        await TokenService.StoreTokenAsync(testToken);
+        var retrieved = await TokenService.GetTokenAsync();
+        await TokenService.ClearTokenAsync();
+        var cleared = await TokenService.GetTokenAsync();
+        tokenTestResult = $"Stored: {testToken}\nRetrieved: {retrieved}\nAfter clear: {cleared}";
+    }
+
+    public class RegisterModel
+    {
+        public string Email { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+    }
+}

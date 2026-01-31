@@ -6,7 +6,14 @@
 
 <h3>Manage Alerts</h3>
 
-@if (alerts == null)
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">
+        <b>Error loading alerts:</b>
+        <pre>@errorMessage</pre>
+    </div>
+}
+else if (alerts == null)
 {
     <p>Loading alerts...</p>
 }
@@ -75,6 +82,7 @@ else
     private ParameterAlert editAlert = new();
     private bool showForm = false;
     private string? userId;
+    private string? errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
@@ -85,8 +93,15 @@ else
 
     private async Task LoadAlerts()
     {
-        if (!string.IsNullOrEmpty(userId))
-            alerts = await ParameterAlertService.GetAlertsByTankAsync(TankId, userId);
+        try
+        {
+            if (!string.IsNullOrEmpty(userId))
+                alerts = await ParameterAlertService.GetAlertsByTankAsync(TankId, userId);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.ToString();
+        }
     }
 
     private void ShowAddAlert()
