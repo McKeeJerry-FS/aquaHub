@@ -1,0 +1,96 @@
+@page "/expenses"
+@using AquaHub.Shared.Models
+@inject NavigationManager Navigation
+@inject IExpenseService ExpenseService
+@inject ITankService TankService
+@inject AuthenticationStateProvider AuthStateProvider
+
+
+<h3>Expense Tracker</h3>
+
+<label for="tankSelect">Select Tank:</label>
+<select id="tankSelect" @onchange="OnTankChanged">
+    <option value="">All Tanks</option>
+    @if (tanks != null)
+    {
+        foreach (var tank in tanks)
+        {
+            <option value="@tank.Id" selected="@(tank.Id == selectedTankId)">@tank.Name</option>
+        }
+    }
+</select>
+
+
+@if (expenses == null)
+{
+    <p>Loading...</p>
+}
+else if (!expenses.Any())
+{
+    <p>No expenses found.</p>
+}
+else
+{
+    <ul>
+        @foreach (var expense in expenses)
+        {
+            <li>@expense.ItemName - @expense.Amount.ToString("C") (@expense.Date.ToShortDateString())
+                @if (expense.Tank != null)
+                {
+                    <span> (Tank: @expense.Tank.Name)</span>
+                }
+            </li>
+        }
+    </ul>
+}
+
+<button @onclick="AddExpense">Add Expense</button>
+
+@code {
+    private List<Expense>? expenses;
+    private List<Tank>? tanks;
+    private int? selectedTankId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userId = authState.User?.Identity?.Name ?? "mobile-user-1";
+        tanks = await TankService.GetAllTanksAsync(userId);
+        await LoadExpenses(userId);
+    }
+
+    private async Task LoadExpenses(string userId)
+    {
+        if (selectedTankId.HasValue)
+        {
+            expenses = await ExpenseService.GetExpensesByTankAsync(selectedTankId.Value, userId);
+        }
+        else
+        {
+            expenses = await ExpenseService.GetAllExpensesAsync(userId);
+        }
+    }
+
+    private async Task OnTankChanged(ChangeEventArgs e)
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userId = authState.User?.Identity?.Name ?? "mobile-user-1";
+        var value = e.Value?.ToString();
+        if (int.TryParse(value, out var tankId))
+        {
+            selectedTankId = tankId;
+        }
+        else
+        {
+            selectedTankId = null;
+        }
+        await LoadExpenses(userId);
+        StateHasChanged();
+    }
+
+    private void AddExpense()
+    {
+        var tankQuery = selectedTankId.HasValue ? $"?tankId={selectedTankId.Value}" : string.Empty;
+        Navigation.NavigateTo($"/expenses/add{tankQuery}");
+    }
+}

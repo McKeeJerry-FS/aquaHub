@@ -1,0 +1,91 @@
+@page "/expenses/add"
+@using Microsoft.AspNetCore.Components
+@using AquaHub.Shared.Models
+@inject NavigationManager Navigation
+@inject IExpenseService ExpenseService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ITankService TankService
+
+<h3>Add Expense</h3>
+
+<EditForm Model="expense" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <div>
+        <label>Tank:</label>
+        @if (tanks == null)
+        {
+            <span>Loading tanks...</span>
+        }
+        else if (!tanks.Any())
+        {
+            <span>No tanks found.</span>
+        }
+        else
+        {
+            <select @bind="expense.TankId">
+                <option value="">General (No Tank)</option>
+                @foreach (var tank in tanks)
+                {
+                    <option value="@tank.Id">@tank.Name</option>
+                }
+            </select>
+        }
+    </div>
+    <div>
+        <label>Item Name:</label>
+        <InputText @bind-Value="expense.ItemName" />
+    </div>
+    <div>
+        <label>Notes:</label>
+        <InputText @bind-Value="expense.Notes" />
+    </div>
+    <div>
+        <label>Amount:</label>
+        <InputNumber @bind-Value="expense.Amount" />
+    </div>
+    <div>
+        <label>Date:</label>
+        <InputDate @bind-Value="expense.Date" />
+    </div>
+    <button type="submit">Save</button>
+    <button type="button" @onclick="Cancel">Cancel</button>
+</EditForm>
+
+@code {
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public int? tankId { get; set; }
+
+    private Expense expense = new Expense { Date = DateTime.Today };
+    private List<Tank>? tanks;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userId = authState.User?.Identity?.Name ?? "mobile-user-1";
+        tanks = await TankService.GetAllTanksAsync(userId);
+        if (tankId.HasValue && tanks != null && tanks.Any(t => t.Id == tankId.Value))
+        {
+            expense.TankId = tankId;
+        }
+        else if (tanks != null && tanks.Count == 1)
+        {
+            // Auto-select the only tank if just one exists
+            expense.TankId = tanks[0].Id;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userId = authState.User?.Identity?.Name ?? "mobile-user-1";
+        await ExpenseService.AddExpenseAsync(expense, userId);
+        Navigation.NavigateTo("/expenses");
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/expenses");
+    }
+}
