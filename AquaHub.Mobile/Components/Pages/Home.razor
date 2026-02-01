@@ -40,8 +40,11 @@ else
                 <a href="/aquariums" class="btn btn-primary">
                     <i class="bi bi-speedometer2"></i> My Tanks
                 </a>
-                <a href="#features" class="btn btn-outline-info">
-                    <i class="bi bi-stars"></i> Features
+                <a href="/reminders" class="btn btn-outline-info">
+                    <i class="bi bi-alarm"></i> Reminders
+                </a>
+                <a href="/notifications" class="btn btn-outline-warning">
+                    <i class="bi bi-bell"></i> Alerts
                 </a>
             </div>
             <div class="badges-container d-flex gap-2 justify-content-center flex-wrap">
@@ -136,6 +139,46 @@ else
             </div>
         </div>
 
+        <!-- Reminders & Notifications Section -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-alarm-fill"></i> Reminders & Notifications</h5>
+            </div>
+            <div class="card-body p-3">
+                <h6 class="mb-2">Never Miss a Task</h6>
+                <p class="text-muted small mb-3">
+                    Set up automated reminders for maintenance, feeding, water changes, and more. Get notified before tasks
+                    are due. Plus, AI-powered predictions based on your patterns!
+                </p>
+                <ul class="list-unstyled small">
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle-fill text-success me-1"></i>
+                        <strong>Smart Reminders:</strong> Recurring tasks on your schedule
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle-fill text-success me-1"></i>
+                        <strong>AI Predictions:</strong> Smart suggestions from your patterns
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle-fill text-success me-1"></i>
+                        <strong>Notifications:</strong> In-app and email alerts
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle-fill text-success me-1"></i>
+                        <strong>Water Alerts:</strong> Automatic parameter warnings
+                    </li>
+                </ul>
+                <div class="d-flex gap-2">
+                    <a href="/reminders" class="btn btn-info btn-sm flex-fill">
+                        <i class="bi bi-alarm"></i> Reminders
+                    </a>
+                    <a href="/reminders/predictions" class="btn btn-warning btn-sm flex-fill">
+                        <i class="bi bi-magic"></i> AI
+                    </a>
+                </div>
+            </div>
+        </div>
+
         <!-- Livestock Management Section -->
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header bg-info text-white">
@@ -204,6 +247,40 @@ else
             </div>
         </div>
 
+        <!-- Health Dashboard Section -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="bi bi-heart-pulse-fill"></i> Tank Health Dashboard</h5>
+            </div>
+            <div class="card-body p-3">
+                <h6 class="mb-2">Comprehensive Health Scoring</h6>
+                <p class="text-muted small mb-3">
+                    Get instant insights into your tank's overall health with weighted scoring across 5 key categories.
+                </p>
+                <ul class="list-unstyled small">
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle-fill text-success me-1"></i>
+                        <strong>Overall Score:</strong> Health grades (Excellent to Critical)
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle-fill text-success me-1"></i>
+                        <strong>5 Categories:</strong> Water quality, maintenance, equipment, livestock, stability
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle-fill text-success me-1"></i>
+                        <strong>Issue Tracking:</strong> Critical alerts and warnings
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle-fill text-success me-1"></i>
+                        <strong>Recommendations:</strong> Actionable insights to improve
+                    </li>
+                </ul>
+                <a href="/health" class="btn btn-danger btn-sm w-100">
+                    <i class="bi bi-graph-up"></i> View Health Dashboard
+                </a>
+            </div>
+        </div>
+
         <!-- Key Features Grid -->
         <div class="card shadow-sm border-0 mb-4" id="features">
             <div class="card-header bg-dark text-white">
@@ -268,31 +345,31 @@ else
                     <div class="col-6">
                         <div class="feature-card p-3 bg-light rounded text-center border-start border-success border-3">
                             <div class="badge bg-success mb-2 small">NEW</div>
-                            <i class="bi bi-graph-up-arrow text-success fs-3"></i>
-                            <h6 class="mt-2 mb-1 small">Growth Tracker</h6>
-                            <p class="text-muted mb-0" style="font-size: 0.7rem;">Monitor size</p>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="feature-card p-3 bg-light rounded text-center border-start border-primary border-3">
-                            <div class="badge bg-primary mb-2 small">NEW</div>
-                            <i class="bi bi-currency-dollar text-primary fs-3"></i>
-                            <h6 class="mt-2 mb-1 small">Expenses</h6>
-                            <p class="text-muted mb-0" style="font-size: 0.7rem;">Track costs</p>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="feature-card p-3 bg-light rounded text-center border-start border-info border-3">
-                            <div class="badge bg-info mb-2 small">NEW</div>
-                            <i class="bi bi-heart-pulse text-info fs-3"></i>
-                            <h6 class="mt-2 mb-1 small">Health Score</h6>
-                            <p class="text-muted mb-0" style="font-size: 0.7rem;">Tank wellness</p>
+                            <i class="bi bi-bell text-info fs-3"></i>
+                            <h6 class="mt-2 mb-1 small">Notifications</h6>
+                            <p class="text-muted mb-0" style="font-size: 0.7rem;">Stay updated</p>
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="feature-card p-3 bg-light rounded text-center border-start border-warning border-3">
                             <div class="badge bg-warning mb-2 small">NEW</div>
-                            <i class="bi bi-magic text-warning fs-3"></i>
+                            <i class="bi bi-alarm text-warning fs-3"></i>
+                            <h6 class="mt-2 mb-1 small">Reminders</h6>
+                            <p class="text-muted mb-0" style="font-size: 0.7rem;">Never forget</p>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="feature-card p-3 bg-light rounded text-center border-start border-danger border-3">
+                            <div class="badge bg-danger mb-2 small">NEW</div>
+                            <i class="bi bi-exclamation-triangle text-danger fs-3"></i>
+                            <h6 class="mt-2 mb-1 small">Alerts</h6>
+                            <p class="text-muted mb-0" style="font-size: 0.7rem;">Parameter watch</p>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="feature-card p-3 bg-light rounded text-center border-start border-primary border-3">
+                            <div class="badge bg-primary mb-2 small">AI</div>
+                            <i class="bi bi-magic text-primary fs-3"></i>
                             <h6 class="mt-2 mb-1 small">AI Predictions</h6>
                             <p class="text-muted mb-0" style="font-size: 0.7rem;">Smart insights</p>
                         </div>

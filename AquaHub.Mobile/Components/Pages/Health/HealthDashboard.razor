@@ -1,0 +1,473 @@
+@page "/health"
+@page "/health/dashboard"
+@using AquaHub.Shared.Models
+@using AquaHub.Shared.Models.Enums
+@using AquaHub.Shared.Services.Interfaces
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Web
+@inject ITankHealthService TankHealthService
+@inject ITankService TankService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize]
+
+<PageTitle>Tank Health Dashboard</PageTitle>
+
+<div class="health-dashboard">
+    <!-- Header -->
+    <div class="page-header bg-gradient">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center py-4">
+                <div>
+                    <h1 class="display-5 fw-bold mb-2">
+                        <i class="bi bi-heart-pulse text-danger me-2"></i>
+                        Tank Health Dashboard
+                    </h1>
+                    <p class="text-muted mb-0">Monitor and optimize your aquarium health</p>
+                </div>
+                <div>
+                    <a href="/tanks" class="btn btn-secondary btn-lg shadow-sm">
+                        <i class="bi bi-arrow-left me-2"></i> Back to Tanks
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container py-4">
+        @if (isLoading)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        }
+        else if (!healthScores.Any())
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                No tanks found. Create a tank to start tracking health scores!
+            </div>
+        }
+        else
+        {
+            <!-- Overall Summary -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <h6 class="text-muted mb-3">Average Health Score</h6>
+                            <div class="d-flex align-items-center">
+                                <div class="health-score-circle @GetGradeColorClass(avgGrade) me-3">
+                                    <span class="score-value">@avgScore.ToString("F0")</span>
+                                </div>
+                                <div>
+                                    <h4 class="mb-0">@avgGrade</h4>
+                                    <small class="text-muted">Across all tanks</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <h6 class="text-muted mb-3">Tanks Monitored</h6>
+                            <div class="d-flex align-items-center">
+                                <div class="icon-box bg-primary bg-opacity-10 text-primary me-3">
+                                    <i class="bi bi-droplet"></i>
+                                </div>
+                                <div>
+                                    <h2 class="mb-0">@healthScores.Count</h2>
+                                    <small class="text-muted">Active tanks</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <h6 class="text-muted mb-3">Action Items</h6>
+                            <div class="d-flex align-items-center">
+                                <div class="icon-box bg-warning bg-opacity-10 text-warning me-3">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                </div>
+                                <div>
+                                    <h2 class="mb-0">@totalIssues</h2>
+                                    <small class="text-muted">Issues requiring attention</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tank Health Cards -->
+            <div class="row g-4 mb-4">
+                @foreach (var health in healthScores)
+                {
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-header bg-white border-bottom">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">@health.TankName</h5>
+                                    <span class="badge @GetGradeBadgeClass(health.Grade)">
+                                        @health.Grade
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <!-- Overall Score -->
+                                <div class="text-center mb-3">
+                                    <div class="health-score-circle @GetGradeColorClass(health.Grade) mx-auto mb-2"
+                                        style="width: 100px; height: 100px;">
+                                        <span class="score-value"
+                                            style="font-size: 2rem;">@health.OverallScore.ToString("F0")</span>
+                                    </div>
+                                    <small class="text-muted">Overall Health Score</small>
+                                </div>
+
+                                <!-- Category Scores -->
+                                <div class="category-scores mb-3">
+                                    <div class="score-bar mb-2">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <small>Water Quality</small>
+                                            <small class="fw-bold">@health.WaterQualityScore.ToString("F0")</small>
+                                        </div>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar @GetScoreColorClass(health.WaterQualityScore)"
+                                                style="width: @health.WaterQualityScore%"></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="score-bar mb-2">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <small>Maintenance</small>
+                                            <small class="fw-bold">@health.MaintenanceScore.ToString("F0")</small>
+                                        </div>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar @GetScoreColorClass(health.MaintenanceScore)"
+                                                style="width: @health.MaintenanceScore%"></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="score-bar mb-2">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <small>Equipment</small>
+                                            <small class="fw-bold">@health.EquipmentScore.ToString("F0")</small>
+                                        </div>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar @GetScoreColorClass(health.EquipmentScore)"
+                                                style="width: @health.EquipmentScore%"></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="score-bar mb-2">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <small>Livestock</small>
+                                            <small class="fw-bold">@health.LivestockScore.ToString("F0")</small>
+                                        </div>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar @GetScoreColorClass(health.LivestockScore)"
+                                                style="width: @health.LivestockScore%"></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="score-bar">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <small>Stability</small>
+                                            <small class="fw-bold">@health.StabilityScore.ToString("F0")</small>
+                                        </div>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar @GetScoreColorClass(health.StabilityScore)"
+                                                style="width: @health.StabilityScore%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Quick Stats -->
+                                <div class="quick-stats">
+                                    @if (health.Issues.Any())
+                                    {
+                                        <div class="alert alert-warning py-2 mb-2">
+                                            <i class="bi bi-exclamation-triangle me-1"></i>
+                                            <small>@health.Issues.Count issue(s) detected</small>
+                                        </div>
+                                    }
+
+                                    <small class="text-muted d-block">
+                                        <i class="bi bi-clock me-1"></i>
+                                        Last test: @GetTimeAgo(health.LastWaterTest)
+                                    </small>
+                                    <small class="text-muted d-block">
+                                        <i class="bi bi-tools me-1"></i>
+                                        Last maintenance: @GetTimeAgo(health.LastMaintenance)
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-white border-top">
+                                <a href="/health/tank/@health.TankId" class="btn btn-sm btn-primary w-100">
+                                    <i class="bi bi-eye me-1"></i> View Details
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Critical Issues -->
+            @if (criticalIssues.Any())
+            {
+                <div class="card border-danger shadow-sm mb-4">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0"><i class="bi bi-exclamation-octagon me-2"></i>Critical Issues</h5>
+                    </div>
+                    <div class="card-body">
+                        @foreach (var issue in criticalIssues)
+                        {
+                            <div class="alert alert-danger mb-2">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <strong>@issue.TankName - @issue.Issue.Title</strong>
+                                        <p class="mb-0">@issue.Issue.Description</p>
+                                    </div>
+                                    <span class="badge bg-danger">@issue.Issue.Severity</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- Top Recommendations -->
+            @if (topRecommendations.Any())
+            {
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Top Recommendations</h5>
+                    </div>
+                    <div class="card-body">
+                        @foreach (var rec in topRecommendations)
+                        {
+                            <div class="recommendation-item mb-3 p-3 border rounded">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <span class="badge @GetPriorityBadgeClass(rec.Recommendation.Priority) me-2">
+                                                @rec.Recommendation.Priority
+                                            </span>
+                                            <strong>@rec.TankName</strong>
+                                            <span class="text-muted ms-2">• @rec.Recommendation.Category</span>
+                                        </div>
+                                        <h6 class="mb-1">@rec.Recommendation.Title</h6>
+                                        <p class="text-muted mb-0">@rec.Recommendation.Description</p>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(rec.Recommendation.ActionUrl))
+                                    {
+                                        <a href="@rec.Recommendation.ActionUrl" class="btn btn-sm btn-outline-primary ms-3">
+                                            Take Action
+                                        </a>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private string userId = string.Empty;
+    private List<TankHealthScore> healthScores = new();
+    private bool isLoading = true;
+
+    private double avgScore;
+    private HealthScoreGrade avgGrade;
+    private int totalIssues;
+    private List<(string TankName, HealthIssue Issue)> criticalIssues = new();
+    private List<(string TankName, HealthRecommendation Recommendation)> topRecommendations = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            healthScores = await TankHealthService.GetAllTankHealthScoresAsync(userId);
+
+            if (healthScores.Any())
+            {
+                avgScore = healthScores.Average(h => h.OverallScore);
+                avgGrade = GetHealthGrade(avgScore);
+                totalIssues = healthScores.Sum(h => h.Issues.Count);
+
+                // Collect critical issues
+                criticalIssues = healthScores
+                .SelectMany(h => h.Issues
+                .Where(i => i.Severity == "Critical")
+                .Select(i => (h.TankName, i)))
+                .ToList();
+
+                // Collect top recommendations (high priority first)
+                topRecommendations = healthScores
+                .SelectMany(h => h.Recommendations
+                .Select(r => (h.TankName, r)))
+                .OrderByDescending(r => r.r.Priority == "Critical" ? 4 :
+                r.r.Priority == "High" ? 3 :
+                r.r.Priority == "Medium" ? 2 : 1)
+                .Take(10)
+                .ToList();
+            }
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private HealthScoreGrade GetHealthGrade(double score)
+    {
+        return score switch
+        {
+            >= 90 => HealthScoreGrade.Excellent,
+            >= 75 => HealthScoreGrade.Good,
+            >= 60 => HealthScoreGrade.Fair,
+            >= 40 => HealthScoreGrade.Poor,
+            _ => HealthScoreGrade.Critical
+        };
+    }
+
+    private string GetGradeColorClass(HealthScoreGrade grade) => grade switch
+    {
+        HealthScoreGrade.Excellent => "grade-excellent",
+        HealthScoreGrade.Good => "grade-good",
+        HealthScoreGrade.Fair => "grade-fair",
+        HealthScoreGrade.Poor => "grade-poor",
+        HealthScoreGrade.Critical => "grade-critical",
+        _ => "grade-fair"
+    };
+
+    private string GetGradeBadgeClass(HealthScoreGrade grade) => grade switch
+    {
+        HealthScoreGrade.Excellent => "bg-success",
+        HealthScoreGrade.Good => "bg-info",
+        HealthScoreGrade.Fair => "bg-warning",
+        HealthScoreGrade.Poor => "bg-danger",
+        HealthScoreGrade.Critical => "bg-dark",
+        _ => "bg-secondary"
+    };
+
+    private string GetScoreColorClass(double score) => score switch
+    {
+        >= 90 => "bg-success",
+        >= 75 => "bg-info",
+        >= 60 => "bg-warning",
+        _ => "bg-danger"
+    };
+
+    private string GetPriorityBadgeClass(string priority) => priority.ToLower() switch
+    {
+        "critical" => "bg-danger",
+        "high" => "bg-warning",
+        "medium" => "bg-info",
+        _ => "bg-secondary"
+    };
+
+    private string GetTimeAgo(DateTime date)
+    {
+        if (date == DateTime.MinValue) return "Never";
+
+        var days = (DateTime.UtcNow - date).Days;
+        return days switch
+        {
+            0 => "Today",
+            1 => "Yesterday",
+            < 7 => $"{days} days ago",
+            < 30 => $"{days / 7} weeks ago",
+            _ => $"{days / 30} months ago"
+        };
+    }
+}
+
+<style>
+    .health-score-circle {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        border: 4px solid;
+    }
+
+    .grade-excellent {
+        background-color: rgba(25, 135, 84, 0.1);
+        border-color: #198754;
+        color: #198754;
+    }
+
+    .grade-good {
+        background-color: rgba(13, 202, 240, 0.1);
+        border-color: #0dcaf0;
+        color: #0dcaf0;
+    }
+
+    .grade-fair {
+        background-color: rgba(255, 193, 7, 0.1);
+        border-color: #ffc107;
+        color: #ffc107;
+    }
+
+    .grade-poor {
+        background-color: rgba(220, 53, 69, 0.1);
+        border-color: #dc3545;
+        color: #dc3545;
+    }
+
+    .grade-critical {
+        background-color: rgba(108, 117, 125, 0.1);
+        border-color: #6c757d;
+        color: #6c757d;
+    }
+
+    .score-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+
+    .icon-box {
+        width: 56px;
+        height: 56px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.75rem;
+    }
+
+    .recommendation-item {
+        transition: all 0.2s;
+    }
+
+    .recommendation-item:hover {
+        background-color: #f8f9fa;
+    }
+</style>

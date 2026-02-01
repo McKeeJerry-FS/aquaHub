@@ -1,0 +1,281 @@
+@page "/notification-settings"
+@using AquaHub.Shared.Models
+@using AquaHub.Shared.Services.Interfaces
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@inject INotificationService NotificationService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize]
+
+<PageTitle>Notification Settings - AquaHub Mobile</PageTitle>
+
+<div class="settings-page">
+    <!-- Header -->
+    <div class="page-header bg-primary text-white shadow-sm sticky-top">
+        <div class="container-fluid px-3 py-3">
+            <div class="d-flex align-items-center">
+                <button class="btn btn-link text-white p-0 me-3" @onclick="GoBack">
+                    <i class="bi bi-arrow-left fs-4"></i>
+                </button>
+                <h1 class="h4 mb-0">
+                    <i class="bi bi-gear-fill"></i> Notification Settings
+                </h1>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid px-3 py-3">
+        @if (isLoading)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="text-muted mt-2 small">Loading settings...</p>
+            </div>
+        }
+        else if (settings != null)
+        {
+            <EditForm Model="@settings" OnValidSubmit="SaveSettings">
+                <DataAnnotationsValidator />
+
+                @if (saveMessage != null)
+                {
+                    <div class="alert @(saveSuccess ? "alert-success" : "alert-danger") alert-dismissible fade show mb-3"
+                        role="alert">
+                        <i class="bi @(saveSuccess ? "bi-check-circle" : "bi-exclamation-triangle")"></i>
+                        @saveMessage
+                        <button type="button" class="btn-close" @onclick="() => saveMessage = null"></button>
+                    </div>
+                }
+
+                <!-- Email Notifications -->
+                <div class="card mb-3 shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-envelope-fill"></i> Email Notifications
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check form-switch mb-3">
+                            <InputCheckbox @bind-Value="settings.EmailNotificationsEnabled" class="form-check-input"
+                                id="emailEnabled" />
+                            <label class="form-check-label" for="emailEnabled">
+                                <strong>Enable email notifications</strong>
+                                <div class="text-muted small">Receive notifications via email</div>
+                            </label>
+                        </div>
+
+                        @if (settings.EmailNotificationsEnabled)
+                        {
+                            <div class="ms-3">
+                                <label class="form-label fw-bold">Email Delivery Mode</label>
+                                <InputSelect @bind-Value="settings.EmailDigestFrequencyHours" class="form-select">
+                                    <option value="0">Instant (send immediately)</option>
+                                    <option value="24">Daily Digest (once per day)</option>
+                                    <option value="168">Weekly Digest (once per week)</option>
+                                </InputSelect>
+                                <div class="form-text small">
+                                    Choose how often you want to receive email notifications
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Notification Types -->
+                <div class="card mb-3 shadow-sm">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-bell-fill"></i> Notification Types
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Reminder Notifications -->
+                        <div class="form-check form-switch mb-3 pb-3 border-bottom">
+                            <InputCheckbox @bind-Value="settings.ReminderNotificationsEnabled" class="form-check-input"
+                                id="reminderEnabled" />
+                            <label class="form-check-label" for="reminderEnabled">
+                                <div class="d-flex align-items-center mb-1">
+                                    <i class="bi bi-alarm text-info fs-5 me-2"></i>
+                                    <strong>Reminder Notifications</strong>
+                                </div>
+                                <div class="text-muted small">
+                                    Get notified about upcoming maintenance, feeding, and other tasks
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Water Parameter Alerts -->
+                        <div class="form-check form-switch mb-3 pb-3 border-bottom">
+                            <InputCheckbox @bind-Value="settings.WaterParameterAlertsEnabled" class="form-check-input"
+                                id="waterAlertEnabled" />
+                            <label class="form-check-label" for="waterAlertEnabled">
+                                <div class="d-flex align-items-center mb-1">
+                                    <i class="bi bi-droplet-fill text-warning fs-5 me-2"></i>
+                                    <strong>Water Parameter Alerts</strong>
+                                </div>
+                                <div class="text-muted small">
+                                    Get alerts when water test parameters are out of optimal range
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Equipment Alerts -->
+                        <div class="form-check form-switch">
+                            <InputCheckbox @bind-Value="settings.EquipmentAlertsEnabled" class="form-check-input"
+                                id="equipmentAlertEnabled" />
+                            <label class="form-check-label" for="equipmentAlertEnabled">
+                                <div class="d-flex align-items-center mb-1">
+                                    <i class="bi bi-gear-fill text-danger fs-5 me-2"></i>
+                                    <strong>Equipment Alerts</strong>
+                                </div>
+                                <div class="text-muted small">
+                                    Get notified about equipment maintenance and issues
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- About Notifications -->
+                <div class="card mb-3 shadow-sm">
+                    <div class="card-header bg-secondary text-white">
+                        <h6 class="mb-0">
+                            <i class="bi bi-info-circle-fill"></i> About Notifications
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled small mb-0">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                                <strong>Reminder Notifications:</strong> Sent based on your reminder schedule
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                                <strong>Water Parameter Alerts:</strong> Automatic alerts when parameters are outside
+                                optimal ranges
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                                <strong>Email Digests:</strong> Notifications batched and sent at selected frequency
+                            </li>
+                            <li class="mb-0">
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                                <strong>In-App:</strong> Always receive in-app notifications regardless of email settings
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Save Button -->
+                <div class="d-grid gap-2 mb-3">
+                    <button type="submit" class="btn btn-primary btn-lg" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            <text>Saving...</text>
+                        }
+                        else
+                        {
+                            <i class="bi bi-save"></i>
+                            <text> Save Settings</text>
+                        }
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" @onclick="GoBack">
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </button>
+                </div>
+            </EditForm>
+        }
+    </div>
+</div>
+
+<style>
+    .settings-page {
+        min-height: 100vh;
+        background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%);
+    }
+
+    .page-header {
+        backdrop-filter: blur(10px);
+    }
+
+    .form-check-input {
+        width: 3rem;
+        height: 1.5rem;
+        cursor: pointer;
+    }
+
+    .form-check-label {
+        cursor: pointer;
+    }
+
+    .card {
+        border: none;
+    }
+
+    .form-check-input:checked {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+</style>
+
+@code {
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private UserNotificationSettings? settings;
+    private string? saveMessage;
+    private bool saveSuccess;
+    private string? userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (!user.Identity?.IsAuthenticated ?? true) return;
+
+        userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId)) return;
+
+        settings = await NotificationService.GetUserSettingsAsync(userId);
+
+        isLoading = false;
+    }
+
+    private async Task SaveSettings()
+    {
+        if (settings == null) return;
+
+        isSaving = true;
+        saveMessage = null;
+
+        try
+        {
+            await NotificationService.UpdateUserSettingsAsync(settings);
+            saveMessage = "Settings saved successfully!";
+            saveSuccess = true;
+
+            // Auto-dismiss success message after 3 seconds
+            await Task.Delay(3000);
+            saveMessage = null;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            saveMessage = $"Error saving settings: {ex.Message}";
+            saveSuccess = false;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/notifications");
+    }
+}
