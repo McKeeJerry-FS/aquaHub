@@ -1,0 +1,13 @@
+<Project>
+  <PropertyGroup>
+    <!-- Disable resource file generation that's causing glob pattern issues in Docker -->
+    <GenerateResourceMSBuildArchitecture>CurrentArchitecture</GenerateResourceMSBuildArchitecture>
+    <GenerateResourceMSBuildRuntime>CurrentRuntime</GenerateResourceMSBuildRuntime>
+    <EmbeddedResourceUseDependentUponConvention>false</EmbeddedResourceUseDependentUponConvention>
+  </PropertyGroup>
+  
+  <!-- Explicitly clear any default resx includes -->
+  <ItemGroup>
+    <EmbeddedResource Remove="@(EmbeddedResource)" />
+  </ItemGroup>
+</Project>

@@ -8,6 +8,9 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
+# Copy MSBuild override file first
+COPY ["AquaHub/Directory.Build.props", "AquaHub/"]
+
 # Copy project file for restore
 COPY ["AquaHub/AquaHub.csproj", "AquaHub/"]
 
