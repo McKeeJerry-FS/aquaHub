@@ -5,8 +5,8 @@
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
   
-  <!-- Remove all embedded resources before any processing -->
-  <Target Name="RemoveAllEmbeddedResources" BeforeTargets="BeforeBuild;BeforeCompile;CoreCompile;PrepareForBuild">
+  <!-- Remove all embedded resources before resource processing only -->
+  <Target Name="RemoveAllEmbeddedResources" BeforeTargets="GenerateSatelliteAssemblies;CreateSatelliteAssemblies;_GenerateSatelliteAssemblyInputs">
     <ItemGroup>
       <EmbeddedResource Remove="@(EmbeddedResource)" />
     </ItemGroup>
