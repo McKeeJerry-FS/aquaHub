@@ -5,6 +5,7 @@ WORKDIR /src
 # Copy solution file
 COPY ["aquaHub.sln", "./"]
 COPY ["Directory.Build.props", "./"]
+COPY ["Directory.Build.targets", "./"]
 
 # Copy project files
 COPY ["AquaHub/AquaHub.csproj", "AquaHub/"]
@@ -18,9 +19,7 @@ COPY ["AquaHub/", "AquaHub/"]
 COPY ["AquaHub.Shared/", "AquaHub.Shared/"]
 
 # Build and publish
-RUN dotnet publish "AquaHub/AquaHub.csproj" -c Release -o /app/publish \
-    /p:GenerateSatelliteAssemblies=false \
-    -v:detailed 2>&1 | tee /tmp/build.log && cat /tmp/build.log | grep -i "resx\|EmbeddedResource" | head -20 || true
+RUN dotnet publish "AquaHub/AquaHub.csproj" -c Release -o /app/publish
 
 # Use the ASP.NET runtime image for running the app
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
