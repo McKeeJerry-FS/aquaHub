@@ -34,4 +34,9 @@
     <ProjectReference Include="..\AquaHub.Shared\AquaHub.Shared.csproj" />
   </ItemGroup>
 
+  <!-- Explicitly clear any embedded resource items to prevent resx lookup -->
+  <ItemGroup>
+    <EmbeddedResource Remove="**/*" />
+  </ItemGroup>
+
 </Project>
