@@ -1,7 +1,9 @@
 # Exclude mobile app entirely
+
 AquaHub.Mobile/
 
 # Exclude mobile-specific files at root
+
 App.xaml
 App.xaml.cs
 MainPage.xaml
@@ -15,31 +17,37 @@ Properties/launchSettings.json
 wwwroot/index.html
 
 # Exclude build outputs
+
 **/bin/
 **/obj/
-**/out/
+\*\*/out/
 
 # Exclude IDE and user-specific files
+
 .vs/
 .vscode/
-*.user
-*.suo
-*.userosscache
-*.sln.docstates
+_.user
+_.suo
+_.userosscache
+_.sln.docstates
 
 # Exclude Git files
+
 .git/
 .gitignore
 .gitattributes
 
 # Exclude documentation and markdown files
-*.md
+
+\*.md
 !README.md
 
 # Exclude SQL migration scripts (if you manage migrations separately)
-*.sql
+
+\*.sql
 
 # Exclude temp and log files
-*.log
-*.tmp
-**/logs/
+
+_.log
+_.tmp
+\*\*/logs/

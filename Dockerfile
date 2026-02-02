@@ -2,21 +2,14 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /app
 
-# Copy solution file and project files
+# Copy solution and all project files
 COPY aquaHub.sln ./
-COPY AquaHub/AquaHub.csproj ./AquaHub/
-COPY AquaHub.Shared/AquaHub.Shared.csproj ./AquaHub.Shared/
-
-# Restore dependencies for web app only
-RUN dotnet restore AquaHub/AquaHub.csproj
-
-# Copy the source code for web app and shared library only
 COPY AquaHub/ ./AquaHub/
 COPY AquaHub.Shared/ ./AquaHub.Shared/
 
 # Build and publish the web app
 WORKDIR /app/AquaHub
-RUN dotnet publish -c Release -o /app/publish --no-restore
+RUN dotnet publish -c Release -o /app/publish
 
 # Use the ASP.NET runtime image for running the app
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
