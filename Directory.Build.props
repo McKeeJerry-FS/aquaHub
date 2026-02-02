@@ -3,12 +3,10 @@
   <PropertyGroup>
     <GenerateSatelliteAssemblies>false</GenerateSatelliteAssemblies>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <EmbeddedResourceUseDependentUponConvention>false</EmbeddedResourceUseDependentUponConvention>
   </PropertyGroup>
   
-  <!-- Remove all embedded resources before resource processing only -->
-  <Target Name="RemoveAllEmbeddedResources" BeforeTargets="GenerateSatelliteAssemblies;CreateSatelliteAssemblies;_GenerateSatelliteAssemblyInputs">
-    <ItemGroup>
-      <EmbeddedResource Remove="@(EmbeddedResource)" />
-    </ItemGroup>
-  </Target>
+  <!-- Override the internal target that validates embedded resources -->
+  <Target Name="_GenerateSatelliteAssemblyInputs" />
+  <Target Name="CreateSatelliteAssemblies" />
 </Project>
