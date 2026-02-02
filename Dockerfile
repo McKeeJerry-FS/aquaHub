@@ -18,7 +18,8 @@ COPY ["AquaHub/", "AquaHub/"]
 COPY ["AquaHub.Shared/", "AquaHub.Shared/"]
 
 # Build and publish
-RUN dotnet publish "AquaHub/AquaHub.csproj" -c Release -o /app/publish
+RUN dotnet publish "AquaHub/AquaHub.csproj" -c Release -o /app/publish \
+    /p:GenerateSatelliteAssemblies=false
 
 # Use the ASP.NET runtime image for running the app
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
