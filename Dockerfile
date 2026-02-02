@@ -7,9 +7,9 @@ COPY aquaHub.sln ./
 COPY AquaHub/ ./AquaHub/
 COPY AquaHub.Shared/ ./AquaHub.Shared/
 
-# Build and publish the web app
+# Clean and build the web app
 WORKDIR /app/AquaHub
-RUN dotnet publish -c Release -o /app/publish
+RUN dotnet clean && dotnet publish -c Release -o /app/publish --verbosity detailed
 
 # Use the ASP.NET runtime image for running the app
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
