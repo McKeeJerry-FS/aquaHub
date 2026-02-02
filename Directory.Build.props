@@ -4,8 +4,10 @@
     <EmbeddedResourceUseDependentUponConvention>false</EmbeddedResourceUseDependentUponConvention>
   </PropertyGroup>
   
-  <ItemGroup>
-    <!-- Explicitly exclude resx patterns from embedded resources -->
-    <EmbeddedResource Remove="**/*.resx" />
-  </ItemGroup>
+  <!-- Clear embedded resources after default items are evaluated -->
+  <Target Name="ClearEmbeddedResources" BeforeTargets="AssignTargetPaths">
+    <ItemGroup>
+      <EmbeddedResource Remove="@(EmbeddedResource)" />
+    </ItemGroup>
+  </Target>
 </Project>
