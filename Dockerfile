@@ -24,7 +24,7 @@ RUN dotnet publish "AquaHub.csproj" -c Release -o /app/publish /p:UseAppHost=fal
 # Final stage
 FROM base AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish .
 
 # Set environment for Railway
 ENV ASPNETCORE_URLS=http://+:${PORT:-8080}
