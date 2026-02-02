@@ -1,9 +1,14 @@
 <Project>
-  <!-- Override the target that checks for resource files -->
-  <Target Name="GenerateSatelliteAssemblies" />
-  
-  <!-- Explicitly set that we have no resx files -->
+  <!-- Disable satellite assembly generation completely -->
   <PropertyGroup>
-    <GenerateResourceUsePreserializedResources>false</GenerateResourceUsePreserializedResources>
+    <GenerateSatelliteAssemblies>false</GenerateSatelliteAssemblies>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
+  
+  <!-- Remove all embedded resources before any processing -->
+  <Target Name="RemoveAllEmbeddedResources" BeforeTargets="BeforeBuild;BeforeCompile;CoreCompile;PrepareForBuild">
+    <ItemGroup>
+      <EmbeddedResource Remove="@(EmbeddedResource)" />
+    </ItemGroup>
+  </Target>
 </Project>
