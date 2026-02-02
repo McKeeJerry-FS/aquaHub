@@ -11,9 +11,7 @@ COPY AquaHub.Shared/ ./AquaHub.Shared/
 WORKDIR /app/AquaHub
 RUN dotnet publish -c Release -o /app/publish \
   /p:UseAppHost=false \
-  /p:EnableDefaultEmbeddedResourceItems=false \
-  /p:EnableDefaultCompileItems=true \
-  /p:GenerateResourceUsePreserializedResources=false
+  /p:EnableDefaultEmbeddedResourceItems=false
 
 # Use the ASP.NET runtime image for running the app
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
