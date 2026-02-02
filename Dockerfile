@@ -22,7 +22,11 @@ COPY ["AquaHub/", "AquaHub/"]
 
 # Publish directly (which includes build)
 WORKDIR "/src/AquaHub"
-RUN dotnet publish "AquaHub.csproj" -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "AquaHub.csproj" -c Release -o /app/publish \
+    /p:UseAppHost=false \
+    /p:EnableDefaultEmbeddedResourceItems=false \
+    /p:EnableDefaultItems=true \
+    /p:GenerateResourceUsePreserializedResources=false
 
 # Final stage
 FROM base AS final
