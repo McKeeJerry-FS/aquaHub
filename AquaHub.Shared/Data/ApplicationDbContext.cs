@@ -30,6 +30,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Expense> Expenses { get; set; }
     public DbSet<ParameterAlert> ParameterAlerts { get; set; }
     public DbSet<TriggeredAlert> TriggeredAlerts { get; set; }
+    public DbSet<JournalEntry> JournalEntries { get; set; }
+    public DbSet<JournalMaintenanceLink> JournalMaintenanceLinks { get; set; }
+    public DbSet<JournalWaterTestLink> JournalWaterTestLinks { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

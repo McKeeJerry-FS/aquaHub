@@ -47,9 +47,10 @@ public class PredictiveReminderBackgroundService : BackgroundService
     private async Task GeneratePredictionsForAllUsersAsync()
     {
         using var scope = _serviceProvider.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var contextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
         var predictiveReminderService = scope.ServiceProvider.GetRequiredService<IPredictiveReminderService>();
 
+        using var context = await contextFactory.CreateDbContextAsync();
         // Get all active users who have tanks
         var userIds = await context.Tanks
             .Select(t => t.UserId)

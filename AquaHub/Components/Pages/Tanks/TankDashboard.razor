@@ -41,6 +41,9 @@ else
                 @viewModel.Tank.Name Dashboard
             </h1>
             <div class="d-flex gap-2">
+                <a href="/tanks/@viewModel.Tank?.Id/journal" class="btn btn-primary">
+                    <i class="bi bi-journal-text"></i> Journal
+                </a>
                 <a href="/tanks/@viewModel.Tank?.Id/maintenance/add" class="btn btn-primary">
                     <i class="bi bi-tools"></i> Log Maintenance
                 </a>
@@ -248,6 +251,47 @@ else
                 }
             </div>
         }
+
+        <!-- Quick Actions Card with Journal -->
+        <div class="card mb-4 shadow">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-lightning-fill"></i> Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <a href="/tanks/@viewModel.Tank?.Id/journal" class="btn btn-outline-primary w-100 py-3">
+                            <i class="bi bi-journal-text fs-3 d-block mb-2"></i>
+                            <strong>Tank Journal</strong>
+                            <small class="d-block text-muted">Record tank activities</small>
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="/tanks/@viewModel.Tank?.Id/maintenance/add" class="btn btn-outline-success w-100 py-3">
+                            <i class="bi bi-tools fs-3 d-block mb-2"></i>
+                            <strong>Log Maintenance</strong>
+                            <small class="d-block text-muted">Track upkeep tasks</small>
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="/tanks/@viewModel.Tank?.Id/watertests/add" class="btn btn-outline-info w-100 py-3">
+                            <i class="bi bi-droplet-half fs-3 d-block mb-2"></i>
+                            <strong>Water Test</strong>
+                            <small class="d-block text-muted">Record parameters</small>
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="/tanks/@viewModel.Tank?.Id/equipment/add" class="btn btn-outline-warning w-100 py-3">
+                            <i class="bi bi-plus-circle fs-3 d-block mb-2"></i>
+                            <strong>Add Equipment</strong>
+                            <small class="d-block text-muted">Register new gear</small>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Tank Health Score Widget -->
         @if (healthScore != null)

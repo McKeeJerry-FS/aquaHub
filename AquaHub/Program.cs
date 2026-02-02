@@ -32,8 +32,11 @@ builder.Services.AddAuthentication(options =>
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(connectionString));
+
+// Use pooled factory for better performance and thread safety in Blazor Server
+builder.Services.AddPooledDbContextFactory<ApplicationDbContext>(options =>
+    options.UseNpgsql(connectionString), poolSize: 128);
+
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddIdentityCore<AppUser>(options =>
@@ -59,6 +62,7 @@ builder.Services.AddScoped<IExpenseService, ExpenseService>();
 builder.Services.AddScoped<ITankHealthService, TankHealthService>();
 builder.Services.AddScoped<IPredictiveReminderService, PredictiveReminderService>();
 builder.Services.AddScoped<IParameterAlertService, ParameterAlertService>();
+builder.Services.AddScoped<JournalService>();
 builder.Services.AddHostedService<ReminderBackgroundService>();
 builder.Services.AddHostedService<PredictiveReminderBackgroundService>();
 builder.Services.AddSingleton<IEmailSender<AppUser>, IdentityNoOpEmailSender>();

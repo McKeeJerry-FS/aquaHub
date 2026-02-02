@@ -1,0 +1,352 @@
+@page "/tanks/{TankId:int}/journal/edit/{EntryId:int}"
+@using AquaHub.Shared.Models
+@using AquaHub.Services
+@using AquaHub.Shared.Services.Interfaces
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@inject JournalService JournalService
+@inject ITankService TankService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+<PageTitle>Edit Journal Entry - @(tank?.Name ?? "Loading...")</PageTitle>
+
+@if (isLoading)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (journalEntry == null)
+{
+    <div class="alert alert-danger">
+        <i class="bi bi-exclamation-triangle"></i> Journal entry not found.
+    </div>
+}
+else
+{
+    <div class="container-fluid">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card shadow">
+                    <div class="card-header">
+                        <h3 class="mb-0">
+                            <i class="bi bi-pencil-square"></i> Edit Journal Entry
+                        </h3>
+                        <small class="text-muted">@tank?.Name</small>
+                    </div>
+                    <div class="card-body">
+                        <EditForm Model="@journalEntry" OnValidSubmit="HandleValidSubmit">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="alert alert-danger" />
+
+                            <div class="mb-3">
+                                <label for="title" class="form-label">Title <span class="text-danger">*</span></label>
+                                <InputText id="title" class="form-control" @bind-Value="journalEntry.Title" />
+                                <ValidationMessage For="@(() => journalEntry.Title)" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="content" class="form-label">Content <span class="text-danger">*</span></label>
+                                <InputTextArea id="content" class="form-control" rows="10"
+                                    @bind-Value="journalEntry.Content" />
+                                <ValidationMessage For="@(() => journalEntry.Content)" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="imagePath" class="form-label">Image URL (Optional)</label>
+                                <InputText id="imagePath" class="form-control" @bind-Value="journalEntry.ImagePath" />
+                            </div>
+
+                            <hr />
+
+                            <h5 class="mb-3">
+                                <i class="bi bi-link-45deg"></i> Manage Linked Records
+                            </h5>
+
+                            <!-- Currently Linked Maintenance -->
+                            @if (journalEntry.MaintenanceLinks.Any())
+                            {
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="bi bi-tools"></i> Linked Maintenance Records
+                                    </label>
+                                    <div class="list-group">
+                                        @foreach (var link in journalEntry.MaintenanceLinks.ToList())
+                                        {
+                                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <strong>@link.MaintenanceLog?.Type.ToString()</strong>
+                                                    @if (link.MaintenanceLog?.WaterChangePercent.HasValue == true)
+                                                    {
+                                                        <span class="badge bg-info">@link.MaintenanceLog.WaterChangePercent% Water
+                                                            Change</span>
+                                                    }
+                                                    <small class="text-muted d-block">
+                                                        @link.MaintenanceLog?.Timestamp.ToLocalTime().ToString("MMM dd, yyyy hh:mm tt")
+                                                    </small>
+                                                </div>
+                                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                                    @onclick="() => UnlinkMaintenance(link.MaintenanceLogId)">
+                                                    <i class="bi bi-x"></i> Unlink
+                                                </button>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+
+                            <!-- Available Maintenance to Link -->
+                            @if (availableMaintenanceLogs.Any())
+                            {
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="bi bi-tools"></i> Add Maintenance Records
+                                    </label>
+                                    <div class="list-group">
+                                        @foreach (var log in availableMaintenanceLogs)
+                                        {
+                                            <label class="list-group-item">
+                                                <input class="form-check-input me-2" type="checkbox"
+                                                    checked="@selectedMaintenanceIds.Contains(log.Id)"
+                                                    @onchange="@(e => ToggleMaintenanceSelection(log.Id, (bool)e.Value!))" />
+                                                <strong>@log.Type.ToString()</strong>
+                                                @if (log.WaterChangePercent.HasValue)
+                                                {
+                                                    <span class="badge bg-info">@log.WaterChangePercent% Water Change</span>
+                                                }
+                                                <small class="text-muted d-block">
+                                                    @log.Timestamp.ToLocalTime().ToString("MMM dd, yyyy hh:mm tt")
+                                                </small>
+                                            </label>
+                                        }
+                                    </div>
+                                </div>
+                            }
+
+                            <!-- Currently Linked Water Tests -->
+                            @if (journalEntry.WaterTestLinks.Any())
+                            {
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="bi bi-droplet-half"></i> Linked Water Tests
+                                    </label>
+                                    <div class="list-group">
+                                        @foreach (var link in journalEntry.WaterTestLinks.ToList())
+                                        {
+                                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <strong>Water Test</strong>
+                                                    <div class="small">
+                                                        @if (link.WaterTest?.PH.HasValue == true)
+                                                        {
+                                                            <span
+                                                                class="badge bg-primary me-1">pH:
+                                                                @link.WaterTest.PH.Value.ToString("F2")</span>
+                                                        }
+                                                        @if (link.WaterTest?.Temperature.HasValue == true)
+                                                        {
+                                                            <span
+                                                                class="badge bg-danger me-1">Temp:
+                                                                @link.WaterTest.Temperature.Value.ToString("F1")°F</span>
+                                                        }
+                                                    </div>
+                                                    <small class="text-muted d-block">
+                                                        @link.WaterTest?.Timestamp.ToLocalTime().ToString("MMM dd, yyyy hh:mm tt")
+                                                    </small>
+                                                </div>
+                                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                                    @onclick="() => UnlinkWaterTest(link.WaterTestId)">
+                                                    <i class="bi bi-x"></i> Unlink
+                                                </button>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+
+                            <!-- Available Water Tests to Link -->
+                            @if (availableWaterTests.Any())
+                            {
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="bi bi-droplet-half"></i> Add Water Tests
+                                    </label>
+                                    <div class="list-group">
+                                        @foreach (var test in availableWaterTests)
+                                        {
+                                            <label class="list-group-item">
+                                                <input class="form-check-input me-2" type="checkbox"
+                                                    checked="@selectedWaterTestIds.Contains(test.Id)"
+                                                    @onchange="@(e => ToggleWaterTestSelection(test.Id, (bool)e.Value!))" />
+                                                <strong>Water Test</strong>
+                                                <div class="small">
+                                                    @if (test.PH.HasValue)
+                                                    {
+                                                        <span class="badge bg-primary me-1">pH:
+                                                            @test.PH.Value.ToString("F2")</span>
+                                                    }
+                                                    @if (test.Temperature.HasValue)
+                                                    {
+                                                        <span class="badge bg-danger me-1">Temp:
+                                                            @test.Temperature.Value.ToString("F1")°F</span>
+                                                    }
+                                                </div>
+                                                <small class="text-muted d-block">
+                                                    @test.Timestamp.ToLocalTime().ToString("MMM dd, yyyy hh:mm tt")
+                                                </small>
+                                            </label>
+                                        }
+                                    </div>
+                                </div>
+                            }
+
+                            <hr />
+
+                            <div class="d-flex justify-content-between">
+                                <button type="button" class="btn btn-secondary" @onclick="Cancel">
+                                    <i class="bi bi-x-circle"></i> Cancel
+                                </button>
+                                <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                                    @if (isSubmitting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"
+                                            aria-hidden="true"></span>
+                                    }
+                                    <i class="bi bi-save"></i> Update Entry
+                                </button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int TankId { get; set; }
+
+    [Parameter]
+    public int EntryId { get; set; }
+
+    private Tank? tank;
+    private JournalEntry? journalEntry;
+    private List<MaintenanceLog> availableMaintenanceLogs = new();
+    private List<WaterTest> availableWaterTests = new();
+    private HashSet<int> selectedMaintenanceIds = new();
+    private HashSet<int> selectedWaterTestIds = new();
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private string userId = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user?.Identity?.IsAuthenticated == true)
+            {
+                userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    tank = await TankService.GetTankByIdAsync(TankId, userId);
+                    journalEntry = await JournalService.GetJournalEntryByIdAsync(EntryId);
+                    
+                    if (journalEntry != null)
+                    {
+                        availableMaintenanceLogs = await JournalService.GetAvailableMaintenanceLogsAsync(TankId, EntryId);
+                        availableWaterTests = await JournalService.GetAvailableWaterTestsAsync(TankId, EntryId);
+                    }
+                }
+            }
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ToggleMaintenanceSelection(int id, bool isChecked)
+    {
+        if (isChecked)
+            selectedMaintenanceIds.Add(id);
+        else
+            selectedMaintenanceIds.Remove(id);
+    }
+
+    private void ToggleWaterTestSelection(int id, bool isChecked)
+    {
+        if (isChecked)
+            selectedWaterTestIds.Add(id);
+        else
+            selectedWaterTestIds.Remove(id);
+    }
+
+    private async Task UnlinkMaintenance(int maintenanceLogId)
+    {
+        if (journalEntry != null)
+        {
+            await JournalService.UnlinkMaintenanceLogAsync(journalEntry.Id, maintenanceLogId);
+            // Refresh the entry to update the UI
+            journalEntry = await JournalService.GetJournalEntryByIdAsync(EntryId);
+            availableMaintenanceLogs = await JournalService.GetAvailableMaintenanceLogsAsync(TankId, EntryId);
+            StateHasChanged();
+        }
+    }
+
+    private async Task UnlinkWaterTest(int waterTestId)
+    {
+        if (journalEntry != null)
+        {
+            await JournalService.UnlinkWaterTestAsync(journalEntry.Id, waterTestId);
+            // Refresh the entry to update the UI
+            journalEntry = await JournalService.GetJournalEntryByIdAsync(EntryId);
+            availableWaterTests = await JournalService.GetAvailableWaterTestsAsync(TankId, EntryId);
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (journalEntry == null) return;
+
+        isSubmitting = true;
+        try
+        {
+            // Update the journal entry
+            await JournalService.UpdateJournalEntryAsync(journalEntry);
+
+            // Link newly selected maintenance logs
+            foreach (var maintenanceId in selectedMaintenanceIds)
+            {
+                await JournalService.LinkMaintenanceLogAsync(journalEntry.Id, maintenanceId);
+            }
+
+            // Link newly selected water tests
+            foreach (var waterTestId in selectedWaterTestIds)
+            {
+                await JournalService.LinkWaterTestAsync(journalEntry.Id, waterTestId);
+            }
+
+            Navigation.NavigateTo($"/tanks/{TankId}/journal");
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo($"/tanks/{TankId}/journal");
+    }
+}

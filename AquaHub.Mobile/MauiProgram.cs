@@ -53,6 +53,7 @@ public static class MauiProgram
 		builder.Services.AddScoped<IGrowthRecordService, GrowthRecordService>();
 		builder.Services.AddScoped<IParameterAlertService, ParameterAlertService>();
 		builder.Services.AddScoped<IPredictiveReminderService, PredictiveReminderService>();
+		builder.Services.AddScoped<JournalService>();
 
 		// Register secure storage for account management
 		builder.Services.AddSingleton<AquaHub.Mobile.Services.ISecureStorage, MauiSecureStorage>();
