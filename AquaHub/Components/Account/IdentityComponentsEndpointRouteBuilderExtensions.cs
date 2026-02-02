@@ -66,13 +66,15 @@ internal static class IdentityComponentsEndpointRouteBuilderExtensions
 
             var userId = await userManager.GetUserIdAsync(user);
             var userName = await userManager.GetUserNameAsync(user) ?? "User";
-            var optionsJson = await signInManager.MakePasskeyCreationOptionsAsync(new()
-            {
-                Id = userId,
-                Name = userName,
-                DisplayName = userName
-            });
-            return TypedResults.Content(optionsJson, contentType: "application/json");
+            // Passkey support requires .NET 10+
+            // var optionsJson = await signInManager.MakePasskeyCreationOptionsAsync(new()
+            // {
+            //     Id = userId,
+            //     Name = userName,
+            //     DisplayName = userName
+            // });
+            // return TypedResults.Content(optionsJson, contentType: "application/json");
+            return TypedResults.Problem("Passkey creation not supported in .NET 8");
         });
 
         accountGroup.MapPost("/PasskeyRequestOptions", async (
@@ -85,8 +87,10 @@ internal static class IdentityComponentsEndpointRouteBuilderExtensions
             await antiforgery.ValidateRequestAsync(context);
 
             var user = string.IsNullOrEmpty(username) ? null : await userManager.FindByNameAsync(username);
-            var optionsJson = await signInManager.MakePasskeyRequestOptionsAsync(user);
-            return TypedResults.Content(optionsJson, contentType: "application/json");
+            // Passkey support requires .NET 10+
+            // var optionsJson = await signInManager.MakePasskeyRequestOptionsAsync(user);
+            // return TypedResults.Content(optionsJson, contentType: "application/json");
+            return TypedResults.Problem("Passkey request not supported in .NET 8");
         });
 
         var manageGroup = accountGroup.MapGroup("/Manage").RequireAuthorization();

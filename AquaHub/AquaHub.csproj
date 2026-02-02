@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-AquaHub-be8e1a92-a4c7-44fb-bf4d-7d55300767ca</UserSecretsId>
@@ -13,13 +13,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.1" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.2" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.1" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="8.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.11" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.11" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.11" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.11" />
     <!-- <PackageReference Include="Npgsql" Version="3.1.7" /> -->
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.11" />
   </ItemGroup>
 
   <ItemGroup>
@@ -33,17 +33,5 @@
   <ItemGroup>
     <ProjectReference Include="..\AquaHub.Shared\AquaHub.Shared.csproj" />
   </ItemGroup>
-
-  <!-- Disable all satellite assembly and resource generation -->
-  <PropertyGroup>
-    <GenerateSatelliteAssemblies>false</GenerateSatelliteAssemblies>
-    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
-    <EmbeddedResourceUseDependentUponConvention>false</EmbeddedResourceUseDependentUponConvention>
-  </PropertyGroup>
-  
-  <Target Name="_GenerateSatelliteAssemblyInputs" />
-  <Target Name="CreateSatelliteAssemblies" />
-  <Target Name="GenerateSatelliteAssemblies" />
-  <Target Name="AssignTargetPaths" />
 
 </Project>

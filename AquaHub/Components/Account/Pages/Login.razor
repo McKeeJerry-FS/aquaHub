@@ -106,12 +106,12 @@
         }
 
         SignInResult result;
-        if (!string.IsNullOrEmpty(Input.Passkey?.CredentialJson))
-        {
-            // When performing passkey sign-in, don't perform form validation.
-            result = await SignInManager.PasskeySignInAsync(Input.Passkey.CredentialJson);
-        }
-        else
+        // Passkey support requires .NET 10+
+        // if (!string.IsNullOrEmpty(Input.Passkey?.CredentialJson))
+        // {
+        //     result = await SignInManager.PasskeySignInAsync(Input.Passkey.CredentialJson);
+        // }
+        // else
         {
             // If doing a password sign-in, validate the form.
             if (!editContext.Validate())
