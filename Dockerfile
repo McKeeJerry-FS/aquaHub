@@ -1,32 +1,45 @@
-# Use the official .NET SDK image for building
+# Base stage for runtime
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+WORKDIR /app
+EXPOSE 8080
+
+# Build stage
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
-# Copy solution file (web projects only) and project files
+# Copy solution and project files
 COPY ["AquaHub.Web.sln", "./"]
 COPY ["AquaHub/AquaHub.csproj", "AquaHub/"]
 COPY ["AquaHub.Shared/AquaHub.Shared.csproj", "AquaHub.Shared/"]
 
-# Restore packages using the solution file
+# Restore packages
 RUN dotnet restore "AquaHub.Web.sln"
 
-# Copy everything else
-COPY ["AquaHub/", "AquaHub/"]
-COPY ["AquaHub.Shared/", "AquaHub.Shared/"]
+# Copy all source files
+COPY . .
 
-# Build and publish
-RUN dotnet publish "AquaHub/AquaHub.csproj" -c Release -o /app/publish
+# Build the main project
+WORKDIR "/src/AquaHub"
+RUN dotnet build "AquaHub.csproj" -c $BUILD_CONFIGURATION -o /app/build --no-restore
 
-# Use the ASP.NET runtime image for running the app
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+# Publish stage
+FROM build AS publish
+ARG BUILD_CONFIGURATION=Release
+RUN dotnet publish "AquaHub.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false --no-restore
+
+# Final stage
+FROM base AS final
 WORKDIR /app
+COPY --from=publish /app/publish .
 
-# Copy the published output from the build stage
-COPY --from=build /app/publish .
-
-# Expose the port that Railway expects
+# Set environment for Railway
 ENV ASPNETCORE_URLS=http://+:${PORT:-8080}
-EXPOSE 8080
 
-# Set the entry point
 ENTRYPOINT ["dotnet", "AquaHub.dll"]
+
+
+
+
+
+
