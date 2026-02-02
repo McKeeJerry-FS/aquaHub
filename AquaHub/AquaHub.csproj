@@ -34,4 +34,9 @@
     <ProjectReference Include="..\AquaHub.Shared\AquaHub.Shared.csproj" />
   </ItemGroup>
 
+  <!-- Explicitly define EmbeddedResource to prevent MSBuild from using glob patterns -->
+  <ItemGroup>
+    <EmbeddedResource Remove="**/*.resx" />
+  </ItemGroup>
+
 </Project>
