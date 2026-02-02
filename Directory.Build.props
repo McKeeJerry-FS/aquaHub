@@ -1,13 +1,6 @@
 <Project>
+  <!-- Disable the problematic default embedded resource behavior -->
   <PropertyGroup>
-    <GenerateResourceUsePreserializedResources>false</GenerateResourceUsePreserializedResources>
-    <EmbeddedResourceUseDependentUponConvention>false</EmbeddedResourceUseDependentUponConvention>
+    <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
   </PropertyGroup>
-  
-  <!-- Clear embedded resources after default items are evaluated -->
-  <Target Name="ClearEmbeddedResources" BeforeTargets="AssignTargetPaths">
-    <ItemGroup>
-      <EmbeddedResource Remove="@(EmbeddedResource)" />
-    </ItemGroup>
-  </Target>
 </Project>
