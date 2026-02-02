@@ -2,19 +2,18 @@
 
 AquaHub.Mobile/
 
-# Exclude mobile-specific files at root
+# Exclude mobile-specific files at root level only
 
-App.xaml
-App.xaml.cs
-MainPage.xaml
-MainPage.xaml.cs
-MauiProgram.cs
-aquaHub.csproj
-Components/
-Platforms/
-Resources/
-Properties/launchSettings.json
-wwwroot/index.html
+/App.xaml
+/App.xaml.cs
+/MainPage.xaml
+/MainPage.xaml.cs
+/MauiProgram.cs
+/aquaHub.csproj
+/Components/
+/Platforms/
+/Resources/
+/wwwroot/index.html
 
 # Exclude build outputs
 
@@ -42,7 +41,7 @@ _.sln.docstates
 \*.md
 !README.md
 
-# Exclude SQL migration scripts (if you manage migrations separately)
+# Exclude SQL migration scripts
 
 \*.sql
 
