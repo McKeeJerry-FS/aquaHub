@@ -6,12 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-AquaHub-be8e1a92-a4c7-44fb-bf4d-7d55300767ca</UserSecretsId>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
-    <GenerateResourceUsePreserializedResources>false</GenerateResourceUsePreserializedResources>
   </PropertyGroup>
-  
-  <ItemGroup>
-    <EmbeddedResource Remove="**/*.resx" />
-  </ItemGroup>
 
   <ItemGroup>
     <None Update="Data\app.db" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
