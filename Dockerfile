@@ -17,8 +17,10 @@ RUN dotnet restore "AquaHub/AquaHub.csproj"
 COPY ["AquaHub/", "AquaHub/"]
 COPY ["AquaHub.Shared/", "AquaHub.Shared/"]
 
-# Build and publish
-RUN dotnet publish "AquaHub/AquaHub.csproj" -c Release -o /app/publish
+# Build and publish - pass property to skip embedded resources
+RUN dotnet publish "AquaHub/AquaHub.csproj" -c Release -o /app/publish \
+    /p:GenerateResourceUsePreserializedResources=false \
+    /p:EmbeddedResourceUseDependentUponConvention=false
 
 # Use the ASP.NET runtime image for running the app
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
