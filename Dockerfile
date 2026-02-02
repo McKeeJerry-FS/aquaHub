@@ -8,25 +8,25 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
-# Copy solution and project files
-COPY ["AquaHub.Web.sln", "./"]
+# Copy project files for restore
 COPY ["AquaHub/AquaHub.csproj", "AquaHub/"]
 COPY ["AquaHub.Shared/AquaHub.Shared.csproj", "AquaHub.Shared/"]
 
 # Restore packages
-RUN dotnet restore "AquaHub.Web.sln"
+RUN dotnet restore "AquaHub/AquaHub.csproj"
 
-# Copy all source files
-COPY . .
+# Copy source files
+COPY ["AquaHub/", "AquaHub/"]
+COPY ["AquaHub.Shared/", "AquaHub.Shared/"]
 
 # Build the main project
 WORKDIR "/src/AquaHub"
-RUN dotnet build "AquaHub.csproj" -c $BUILD_CONFIGURATION -o /app/build --no-restore
+RUN dotnet build "AquaHub.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # Publish stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "AquaHub.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false --no-restore
+RUN dotnet publish "AquaHub.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # Final stage
 FROM base AS final
