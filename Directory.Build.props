@@ -1,6 +1,9 @@
 <Project>
-  <!-- Disable the problematic default embedded resource behavior -->
+  <!-- Override the target that checks for resource files -->
+  <Target Name="GenerateSatelliteAssemblies" />
+  
+  <!-- Explicitly set that we have no resx files -->
   <PropertyGroup>
-    <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
+    <GenerateResourceUsePreserializedResources>false</GenerateResourceUsePreserializedResources>
   </PropertyGroup>
 </Project>
