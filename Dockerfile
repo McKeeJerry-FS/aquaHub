@@ -2,10 +2,7 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copy solution file
-COPY ["aquaHub.sln", "./"]
-
-# Copy project files
+# Copy project files only (no solution file to avoid mobile project confusion)
 COPY ["AquaHub/AquaHub.csproj", "AquaHub/"]
 COPY ["AquaHub.Shared/AquaHub.Shared.csproj", "AquaHub.Shared/"]
 
