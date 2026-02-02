@@ -2,12 +2,13 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copy project files only (no solution file to avoid mobile project confusion)
+# Copy solution file (web projects only) and project files
+COPY ["AquaHub.Web.sln", "./"]
 COPY ["AquaHub/AquaHub.csproj", "AquaHub/"]
 COPY ["AquaHub.Shared/AquaHub.Shared.csproj", "AquaHub.Shared/"]
 
-# Restore packages
-RUN dotnet restore "AquaHub/AquaHub.csproj"
+# Restore packages using the solution file
+RUN dotnet restore "AquaHub.Web.sln"
 
 # Copy everything else
 COPY ["AquaHub/", "AquaHub/"]
