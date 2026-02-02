@@ -4,6 +4,7 @@ WORKDIR /src
 
 # Copy solution file
 COPY ["aquaHub.sln", "./"]
+COPY ["Directory.Build.props", "./"]
 
 # Copy project files
 COPY ["AquaHub/AquaHub.csproj", "AquaHub/"]

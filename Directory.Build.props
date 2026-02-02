@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <GenerateResourceUsePreserializedResources>false</GenerateResourceUsePreserializedResources>
+    <EmbeddedResourceUseDependentUponConvention>false</EmbeddedResourceUseDependentUponConvention>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <!-- Explicitly exclude resx patterns from embedded resources -->
+    <EmbeddedResource Remove="**/*.resx" />
+  </ItemGroup>
+</Project>
