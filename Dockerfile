@@ -17,6 +17,12 @@ RUN dotnet restore "AquaHub/AquaHub.csproj"
 COPY ["AquaHub/", "AquaHub/"]
 COPY ["AquaHub.Shared/", "AquaHub.Shared/"]
 
+# Diagnostic: Show what files were copied
+RUN echo "=== Files in AquaHub ===" && \
+    find AquaHub -type f -name "*.cs" -o -name "*.razor" | head -20 && \
+    echo "=== Directory.Build.props ===" && \
+    cat Directory.Build.props || echo "File not found"
+
 # Build and publish - pass property to skip embedded resources
 RUN dotnet publish "AquaHub/AquaHub.csproj" -c Release -o /app/publish \
     /p:GenerateResourceUsePreserializedResources=false \
