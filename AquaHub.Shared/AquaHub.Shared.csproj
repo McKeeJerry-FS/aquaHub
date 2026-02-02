@@ -26,5 +26,6 @@
   <Target Name="_GenerateSatelliteAssemblyInputs" />
   <Target Name="CreateSatelliteAssemblies" />
   <Target Name="GenerateSatelliteAssemblies" />
+  <Target Name="AssignTargetPaths" />
 
 </Project>

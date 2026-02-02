@@ -19,7 +19,8 @@ COPY ["AquaHub.Shared/", "AquaHub.Shared/"]
 
 # Build and publish
 RUN dotnet publish "AquaHub/AquaHub.csproj" -c Release -o /app/publish \
-    /p:GenerateSatelliteAssemblies=false
+    /p:GenerateSatelliteAssemblies=false \
+    -v:detailed 2>&1 | tee /tmp/build.log && cat /tmp/build.log | grep -i "resx\|EmbeddedResource" | head -20 || true
 
 # Use the ASP.NET runtime image for running the app
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
