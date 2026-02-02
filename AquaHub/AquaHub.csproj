@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-AquaHub-be8e1a92-a4c7-44fb-bf4d-7d55300767ca</UserSecretsId>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+    <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
   </PropertyGroup>
 
   <ItemGroup>
@@ -32,11 +33,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AquaHub.Shared\AquaHub.Shared.csproj" />
-  </ItemGroup>
-
-  <!-- Explicitly define EmbeddedResource to prevent MSBuild from using glob patterns -->
-  <ItemGroup>
-    <EmbeddedResource Remove="**/*.resx" />
   </ItemGroup>
 
 </Project>
